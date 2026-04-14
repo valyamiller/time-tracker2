@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 style="margin: 2rem 0;">Дашборд сотрудника</h1>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Часов отработано (месяц)</div>
+        <div class="stat-value">{{ "%.1f"|format(total_hours) }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Выходные дни</div>
+        <div class="stat-value">{{ vacation_days }}</div>
+    </div>
+</div>
+
+{% if shifts %}
+<div class="card">
+    <div class="card-header">Мои смены на этот месяц</div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Тип смены</th>
+                    <th>Время</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for shift in shifts[:5] %}
+                <tr>
+                    <td>{{ shift.date }}</td>
+                    <td>
+                        {% if shift.shift_type == 'morning' %}🌅 Утро
+                        {% elif shift.shift_type == 'day' %}☀️ День
+                        {% elif shift.shift_type == 'night' %}🌙 Вечер
+                        {% elif shift.shift_type == 'vacation' %}🏖️ Отпуск
+                        {% else %}🚫 Выходной
+                        {% endif %}
+                    </td>
+                    <td>{{ shift.start_time }} - {{ shift.end_time }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if shifts|length > 5 %}
+    <a href="{{ url_for('my_shifts') }}" style="display: inline-block; margin-top: 1rem;">→ Все смены</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">Запросить выходные</div>
+    <form method="POST" action="{{ url_for('vacation_request') }}">
+        <div class="form-group">
+            <label>Тип</label>
+            <select name="type" required>
+                <option value="vacation">Отпуск</option>
+                <option value="sick">Больничный</option>
+                <option value="other">Другое</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Начальная дата</label>
+            <input type="date" name="start_date" required>
+        </div>
+        <div class="form-group">
+            <label>Конечная дата</label>
+            <input type="date" name="end_date" required>
+        </div>
+        <div class="form-group">
+            <label>Причина</label>
+            <textarea name="reason" rows="3"></textarea>
+        </div>
+        <button type="submit">Отправить заявку</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">Последние записи</div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Часы</th>
+                    <th>Описание</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in work_entries %}
+                <tr>
+                    <td>{{ entry.date }}</td>
+                    <td>{{ entry.hours_worked }}</td>
+                    <td>{{ entry.description or '-' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" style="text-align: center;">Нет записей</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

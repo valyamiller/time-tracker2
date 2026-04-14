@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .calendar-container {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 1rem;
+        overflow-x: auto;
+    }
+    
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .calendar-nav {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+    
+    .calendar-nav a {
+        padding: 0.5rem 1rem;
+        background: var(--bg-tertiary);
+        border-radius: 8px;
+        text-decoration: none;
+        color: var(--text-primary);
+    }
+    
+    .calendar-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.75rem;
+    }
+    
+    .calendar-table th {
+        background: var(--bg-tertiary);
+        padding: 0.5rem;
+        text-align: center;
+        border: 1px solid var(--border-color);
+    }
+    
+    .calendar-table td {
+        border: 1px solid var(--border-color);
+        padding: 0.5rem;
+        vertical-align: top;
+        min-width: 100px;
+    }
+    
+    .user-cell {
+        font-weight: 600;
+        background: var(--bg-tertiary);
+        text-align: center;
+        vertical-align: middle;
+    }
+    
+    .calendar-day {
+        font-weight: 600;
+        text-align: center;
+        padding-bottom: 0.25rem;
+        margin-bottom: 0.25rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .weekend {
+        background: rgba(239, 68, 68, 0.1);
+    }
+    
+    .shift-morning { background: rgba(59, 130, 246, 0.3); border-left: 3px solid #3b82f6; padding: 0.25rem; margin: 0.25rem 0; border-radius: 4px; }
+    .shift-day { background: rgba(16, 185, 129, 0.3); border-left: 3px solid #10b981; padding: 0.25rem; margin: 0.25rem 0; border-radius: 4px; }
+    .shift-night { background: rgba(139, 92, 246, 0.3); border-left: 3px solid #8b5cf6; padding: 0.25rem; margin: 0.25rem 0; border-radius: 4px; }
+    .shift-off { background: rgba(239, 68, 68, 0.3); border-left: 3px solid #ef4444; padding: 0.25rem; margin: 0.25rem 0; border-radius: 4px; }
+    .shift-vacation { background: rgba(245, 158, 11, 0.3); border-left: 3px solid #f59e0b; padding: 0.25rem; margin: 0.25rem 0; border-radius: 4px; }
+    .vacation-badge { background: rgba(245, 158, 11, 0.3); border-left: 3px solid #f59e0b; padding: 0.25rem; margin: 0.25rem 0; border-radius: 4px; text-align: center; }
+    
+    .btn-small {
+        display: inline-block;
+        padding: 0.2rem 0.4rem;
+        font-size: 0.7rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        margin: 0.1rem;
+    }
+    
+    .btn-primary { background: var(--accent-primary); color: white; }
+    .btn-danger { background: var(--accent-danger); color: white; }
+    
+    .legend {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+        padding: 1rem;
+        background: var(--bg-secondary);
+        border-radius: 8px;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    select, input {
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        border-radius: 4px;
+        padding: 0.2rem;
+        font-size: 0.7rem;
+    }
+    
+    button {
+        background: var(--accent-primary);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 0.2rem 0.4rem;
+        cursor: pointer;
+        font-size: 0.7rem;
+    }
+</style>
+
+<div class="calendar-header">
+    <h1>📅 Календарь смен</h1>
+    <div class="calendar-nav">
+        <a href="{{ url_for('admin_calendar', year=prev_year, month=prev_month) }}">← {{ prev_month }}.{{ prev_year }}</a>
+        <span style="font-size: 1.2rem; font-weight: 600;">{{ month_name }} {{ year }}</span>
+        <a href="{{ url_for('admin_calendar', year=next_year, month=next_month) }}">{{ next_month }}.{{ next_year }} →</a>
+    </div>
+</div>
+
+<div class="calendar-container">
+    <table class="calendar-table">
+        <thead>
+            <tr>
+                <th>Сотрудник</th>
+                {% for day in days %}
+                <th>{{ day.date.day }}<br><small>{{ ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][day.day_of_week] }}</small></th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td class="user-cell">
+                    {{ user.username }}
+                </td>
+                {% for day in days %}
+                {% set shift = shifts_dict.get((user.id, day.date)) %}
+                {% set vacation = vacations_dict.get((user.id, day.date)) %}
+                <td class="{% if day.is_weekend %}weekend{% endif %}">
+                    <div class="calendar-day">{{ day.date.day }}</div>
+                    
+                    {% if vacation %}
+                    <div class="vacation-badge">
+                        🏖️ Отпуск
+                    </div>
+                    {% endif %}
+                    
+                    {% if shift %}
+                        {% if shift.shift_type == 'vacation' %}
+                        <div class="shift-vacation">
+                            <strong>🏖️ Отпуск</strong>
+                            {% if shift.notes %}
+                            <br><small>{{ shift.notes[:15] }}</small>
+                            {% endif %}
+                            <br>
+                            <a href="{{ url_for('delete_shift', shift_id=shift.id) }}" class="btn-small btn-danger" onclick="return confirm('Удалить отпуск?')">🗑️ Удалить</a>
+                        </div>
+                        {% else %}
+                        <div class="shift-{{ shift.shift_type }}">
+                            <strong>
+                                {% if shift.shift_type == 'morning' %}🌅 Утро
+                                {% elif shift.shift_type == 'day' %}☀️ День
+                                {% elif shift.shift_type == 'night' %}🌙 Вечер
+                                {% else %}🚫 Выходной
+                                {% endif %}
+                            </strong>
+                            <br>{{ shift.start_time }}-{{ shift.end_time }}
+                            
+                            {% set start_hour = shift.start_time.split(':')[0]|int %}
+                            {% set end_hour = shift.end_time.split(':')[0]|int %}
+                            {% if shift.shift_type != 'off' and (end_hour - start_hour) > 4 %}
+                                <br><small>🕐 {{ (end_hour - start_hour - 1) }} часов (с обедом)</small>
+                            {% elif shift.shift_type != 'off' %}
+                                <br><small>🕐 {{ (end_hour - start_hour) }} часов</small>
+                            {% endif %}
+                            
+                            {% if shift.notes %}
+                            <br><small>{{ shift.notes[:15] }}</small>
+                            {% endif %}
+                            <br>
+                            <a href="{{ url_for('delete_shift', shift_id=shift.id) }}" class="btn-small btn-danger" onclick="return confirm('Удалить смену?')">🗑️ Удалить</a>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                    <form method="POST" action="{{ url_for('add_shift') }}" style="margin-top: 0.5rem;">
+                        <input type="hidden" name="user_id" value="{{ user.id }}">
+                        <input type="hidden" name="date" value="{{ day.date.isoformat() }}">
+                        
+                        <select name="shift_type" style="width: 100%; margin-bottom: 0.25rem;">
+                            <option value="morning">🌅 Утро (09-18)</option>
+                            <option value="day">☀️ День (12-21)</option>
+                            <option value="night">🌙 Вечер (21-06)</option>
+                            <option value="off">🚫 Выходной</option>
+                            <option value="vacation">🏖️ Отпуск</option>
+                        </select>
+                        <input type="time" name="start_time" value="09:00" style="width: 48%; font-size: 0.7rem;">
+                        <input type="time" name="end_time" value="18:00" style="width: 48%; font-size: 0.7rem;">
+                        <input type="text" name="notes" placeholder="Примечание" style="width: 100%; margin-top: 0.25rem; font-size: 0.7rem;">
+                        <button type="submit" style="width: 100%; margin-top: 0.25rem;">+ Добавить</button>
+                    </form>
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="legend">
+    <div class="legend-item"><span style="background: rgba(59, 130, 246, 0.3); padding: 0.2rem 0.5rem;">🌅</span> Утро (09:00-18:00)</div>
+    <div class="legend-item"><span style="background: rgba(16, 185, 129, 0.3); padding: 0.2rem 0.5rem;">☀️</span> День (12:00-21:00)</div>
+    <div class="legend-item"><span style="background: rgba(139, 92, 246, 0.3); padding: 0.2rem 0.5rem;">🌙</span> Вечер (21:00-06:00)</div>
+    <div class="legend-item"><span style="background: rgba(239, 68, 68, 0.3); padding: 0.2rem 0.5rem;">🚫</span> Выходной</div>
+    <div class="legend-item"><span style="background: rgba(245, 158, 11, 0.3); padding: 0.2rem 0.5rem;">🏖️</span> Отпуск</div>
+</div>
+
+<div class="card" style="margin-top: 1rem; background: var(--bg-tertiary);">
+    <div class="card-header">📌 Как считаются часы</div>
+    <div style="padding: 0.5rem; font-size: 0.8rem;">
+        <p>✓ Стандартная смена (09:00-18:00): <strong>8 часов</strong> (вычитается 1 час обеда)</p>
+        <p>✓ Удлиненная смена (10:00-23:00): <strong>12 часов</strong> (вычитается 1 час обеда)</p>
+        <p>✓ Короткая смена (менее 4 часов): обед не вычитается</p>
+        <p>✓ Выходной день: 0 часов</p>
+        <p>✓ Отпуск: 0 часов</p>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimeTracker - Учет рабочего времени</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    {% if current_user.is_authenticated %}
+    <nav class="navbar">
+        <div class="container">
+            <a href="{{ url_for('dashboard') }}" class="nav-brand">TimeTracker</a>
+            <div class="nav-menu">
+                {% if current_user.is_admin() %}
+                    <a href="{{ url_for('admin_calendar') }}">📅 Календарь смен</a>
+                    <a href="{{ url_for('admin_reports') }}">📊 Итоги</a>
+                    <a href="{{ url_for('admin_overtime_requests') }}">⏱️ Запросы часов</a>
+                    <a href="{{ url_for('admin_add_my_hours') }}">➕ Добавить часы</a>
+                    <a href="{{ url_for('admin') }}">👥 Управление</a>
+                {% else %}
+                    <a href="{{ url_for('dashboard') }}">📊 Дашборд</a>
+                    <a href="{{ url_for('my_shifts') }}">📅 Мои смены</a>
+                    <a href="{{ url_for('overtime_request') }}">⏱️ Запрос на часы</a>
+                    <a href="{{ url_for('work_log') }}">📝 Рабочие дни</a>
+                {% endif %}
+                <a href="{{ url_for('profile') }}">👤 Профиль</a>
+                <a href="{{ url_for('logout') }}">🚪 Выход</a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+    
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

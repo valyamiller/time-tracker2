@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .request-card {
+        background: var(--bg-tertiary);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    .btn-success {
+        background: #10b981;
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 6px;
+        text-decoration: none;
+        display: inline-block;
+    }
+    .btn-danger {
+        background: #ef4444;
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+    }
+</style>
+
+<h1 style="margin: 2rem 0;">⏱️ Запросы на дополнительные часы</h1>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ pending_requests|length }}</div>
+        <div class="stat-label">Ожидают согласования</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ approved_requests|length }}</div>
+        <div class="stat-label">Одобрено</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ rejected_requests|length }}</div>
+        <div class="stat-label">Отклонено</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">⏳ На согласовании</div>
+    {% for req in pending_requests %}
+    <div class="request-card">
+        <strong>👤 {{ req.user.username }}</strong><br>
+        📅 {{ req.date }}<br>
+        ⏱️ {{ req.hours }} часов<br>
+        📝 {{ req.reason }}
+        <div style="margin-top: 1rem;">
+            <a href="{{ url_for('approve_overtime', req_id=req.id) }}" class="btn-success">✅ Одобрить</a>
+            <form method="POST" action="{{ url_for('reject_overtime', req_id=req.id) }}" style="display: inline; margin-left: 0.5rem;">
+                <input type="text" name="admin_comment" placeholder="Причина отклонения" style="width: 200px;">
+                <button type="submit" class="btn-danger">❌ Отклонить</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% if pending_requests|length == 0 %}
+    <p style="text-align: center; padding: 2rem;">Нет запросов</p>
+    {% endif %}
+</div>
+
+{% endblock %}

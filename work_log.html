@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 style="margin: 2rem 0;">Учет рабочего времени</h1>
+
+<div class="card">
+    <div class="card-header">История рабочих дней</div>
+    <div class="table-container">
+        <table>
+            <thead>
+    <tr>
+        <th>Дата</th>
+        <th>Часы</th>
+        <th>Описание</th>
+        <th>Источник</th>
+        <th>Кто добавил</th>
+        <th>Статус</th>
+    </tr>
+</thead>
+            
+            <tbody>
+                {% for entry in entries %}
+                <tr>
+                    <td>{{ entry.date }}</td>
+                    <td>{{ entry.hours_worked }}</td>
+                    <td>{{ entry.description or '-' }}</td>
+                    <td>
+                        {% if entry.source == 'shift' %}📅 Смена
+                        {% elif entry.source == 'request' %}⏱️ Запрос
+                        {% elif entry.source == 'admin' %}👑 Админ
+                        {% elif entry.source == 'self' %}👤 Самостоятельно
+                        {% else %}❓ Другое
+                        {% endif %}
+                    </td>
+                    <td>{{ entry.admin_name or '-' }}</td>
+                    <td><span class="badge badge-{{ entry.status }}">{{ entry.status }}</span></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="text-align: center;">Нет записей</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
