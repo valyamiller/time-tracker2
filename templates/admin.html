@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 style="margin: 2rem 0;">Админ панель</h1>
+
+<div class="card">
+    <div class="card-header">Добавить пользователя</div>
+    <form method="POST" action="{{ url_for('add_user') }}">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <input type="text" name="username" placeholder="Имя пользователя" required>
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Пароль" required>
+            <select name="role">
+                <option value="user">Пользователь</option>
+                <option value="admin">Администратор</option>
+            </select>
+            <input type="number" name="working_hours" step="0.5" placeholder="Часов в день" value="8">
+            <button type="submit">Добавить</button>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">Пользователи</div>
+    <div class="table-container">
+        <table>
+            <thead>
+    <tr>
+        <th>ID</th>
+        <th>Имя</th>
+        <th>Email</th>
+        <th>Роль</th>
+        <th>Статус</th>
+        <th>Действия</th>
+        <th>Часы</th>  <!-- Новая колонка -->
+    </tr>
+</thead>
+<tbody>
+    {% for user in users %}
+    <tr>
+        <td>{{ user.id }}</td>
+        <td>{{ user.username }}</td>
+        <td>{{ user.email }}</td>
+        <td><span class="badge badge-{{ user.role }}">{{ user.role }}</span></td>
+        <td>{{ "Активен" if user.is_active else "Заблокирован" }}</td>
+        <td>
+            <a href="{{ url_for('toggle_user', user_id=user.id) }}" class="btn btn-warning" style="display: inline-block; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                {{ "Блок" if user.is_active else "Разблок" }}
+            </a>
+            {% if user.id != current_user.id %}
+            <a href="{{ url_for('delete_user', user_id=user.id) }}" class="btn btn-danger" style="display: inline-block; padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="return confirm('Удалить пользователя?')">
+                Удалить
+            </a>
+            {% endif %}
+        </td>
+        <td>
+            <a href="{{ url_for('admin_add_hours', user_id=user.id) }}" class="btn btn-primary" style="display: inline-block; padding: 0.25rem 0.5rem; font-size: 0.75rem;">➕ Добавить часы</a>
+        </td>
+    </tr>
+    {% endfor %}
+</tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Заявки на выходные</div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Пользователь</th>
+                    <th>Период</th>
+                    <th>Тип</th>
+                    <th>Причина</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for vac in pending_vacations %}
+                <tr>
+                    <td>{{ vac.user.username }}</td>
+                    <td>{{ vac.start_date }} - {{ vac.end_date }}</td>
+                    <td>{{ vac.type }}</td>
+                    <td>{{ vac.reason or '-' }}</td>
+                    <td>
+                        <a href="{{ url_for('approve_vacation', vac_id=vac.id) }}" class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Одобрить</a>
+                        <a href="{{ url_for('reject_vacation', vac_id=vac.id) }}" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Отклонить</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="text-align: center;">Нет заявок</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

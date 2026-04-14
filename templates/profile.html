@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 style="margin: 2rem 0;">Личный кабинет</h1>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Имя пользователя</div>
+        <div class="stat-value" style="font-size: 1.5rem;">{{ current_user.username }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Email</div>
+        <div class="stat-value" style="font-size: 1.5rem;">{{ current_user.email }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Роль</div>
+        <div class="stat-value" style="font-size: 1.5rem;">{{ current_user.role }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Норма часов в день</div>
+        <div class="stat-value" style="font-size: 1.5rem;">{{ current_user.working_hours_per_day }}</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Смена пароля</div>
+    <form method="POST" action="{{ url_for('change_password') }}">
+        <div class="form-group">
+            <label>Текущий пароль</label>
+            <input type="password" name="old_password" required>
+        </div>
+        <div class="form-group">
+            <label>Новый пароль</label>
+            <input type="password" name="new_password" required>
+        </div>
+        <button type="submit">Изменить пароль</button>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">Информация</div>
+    <p>Дата регистрации: {{ current_user.created_at.strftime('%d.%m.%Y') }}</p>
+    <p>Статус: {{ "Активен" if current_user.is_active else "Заблокирован" }}</p>
+</div>
+{% endblock %}

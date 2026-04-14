@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: var(--bg-secondary);
+        padding: 1rem;
+        border-radius: 12px;
+        text-align: center;
+        border: 1px solid var(--border-color);
+    }
+    
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--accent-primary);
+    }
+    
+    .stat-label {
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+    }
+    
+    .report-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .report-nav {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+    
+    .report-nav a {
+        padding: 0.5rem 1rem;
+        background: var(--bg-tertiary);
+        border-radius: 8px;
+        text-decoration: none;
+        color: var(--text-primary);
+    }
+    
+    .user-card {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+    }
+    
+    .user-card-header {
+        background: var(--bg-tertiary);
+        padding: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        cursor: pointer;
+    }
+    
+    .user-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+    
+    .user-stats {
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .user-stat {
+        text-align: center;
+    }
+    
+    .user-stat-value {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--accent-primary);
+    }
+    
+    .user-stat-label {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+    }
+    
+    .user-card-body {
+        padding: 1rem;
+        display: none;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .user-card-body.open {
+        display: block;
+    }
+    
+    .shift-badge {
+        display: inline-block;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        margin: 0.1rem;
+    }
+    
+    .shift-morning { background: rgba(59, 130, 246, 0.3); }
+    .shift-day { background: rgba(16, 185, 129, 0.3); }
+    .shift-night { background: rgba(139, 92, 246, 0.3); }
+    .shift-off { background: rgba(239, 68, 68, 0.3); }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    th, td {
+        padding: 0.5rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    th {
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+    
+    .expand-icon {
+        font-size: 1.2rem;
+        transition: transform 0.3s;
+        display: inline-block;
+    }
+    
+    .expand-icon.rotated {
+        transform: rotate(180deg);
+    }
+    .shift-vacation { background: rgba(245, 158, 11, 0.3); border-left: 3px solid #f59e0b; padding: 0.25rem; margin: 0.25rem 0; border-radius: 4px; }
+</style>
+
+<div class="report-header">
+    <h1>📊 Итоги за {{ month_name }} {{ year }}</h1>
+    <div class="report-nav">
+        <a href="{{ url_for('admin_reports', year=prev_year, month=prev_month) }}">← {{ prev_month }}.{{ prev_year }}</a>
+        <span style="font-size: 1rem; font-weight: 600;">{{ month_name }} {{ year }}</span>
+        <a href="{{ url_for('admin_reports', year=next_year, month=next_month) }}">{{ next_month }}.{{ next_year }} →</a>
+    </div>
+</div>
+
+<!-- Общая статистика -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ user_stats|length }}</div>
+        <div class="stat-label">Сотрудников</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ total_shifts_all }}</div>
+        <div class="stat-label">Всего смен</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{ "%.1f"|format(total_hours_all) }}</div>
+        <div class="stat-label">Всего часов</div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-value">{{ total_vacation_days_all }}</div>
+        <div class="stat-label">Дней отпуска</div>
+    </div>
+</div>
+
+<!-- Статистика по каждому сотруднику -->
+{% for stat in user_stats %}
+<div class="user-card" data-user-id="{{ loop.index0 }}">
+    <div class="user-card-header" onclick="toggleCard(this)">
+        <div class="user-name">
+            👤 {{ stat.user.username }}
+            <span style="font-size: 0.8rem; color: var(--text-secondary);">({{ stat.user.role }})</span>
+        </div>
+        <div class="user-stats">
+            <div class="user-stat">
+                <div class="user-stat-value">{{ stat.total_shifts }}</div>
+                <div class="user-stat-label">смен</div>
+            </div>
+            <div class="user-stat">
+                <div class="user-stat-value">{{ "%.1f"|format(stat.total_hours) }}</div>
+                <div class="user-stat-label">часов</div>
+            </div>
+            
+            <div class="user-stat">
+                <div class="user-stat-value">{{ stat.vacation_days }}</div>
+                <div class="user-stat-label">отпуск</div>
+            </div>
+            <div class="expand-icon">▼</div>
+        </div>
+    </div>
+    <div class="user-card-body">
+        <div style="margin-bottom: 1rem;">
+            <strong>📈 Смены по типам:</strong><br>
+            <span class="shift-badge shift-morning">🌅 Утро: {{ stat.shift_count.morning }}</span>
+            <span class="shift-badge shift-day">☀️ День: {{ stat.shift_count.day }}</span>
+            <span class="shift-badge shift-night">🌙 Вечер: {{ stat.shift_count.night }}</span>
+            <span class="shift-badge shift-off">🚫 Выходные: {{ stat.shift_count.off }}</span>
+            <span class="shift-badge shift-vacation">🏖️ Отпуск: {{ stat.shift_count.vacation }}</span>
+        </div>
+        
+        {% if stat.shifts %}
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Дата</th>
+                        <th>Тип смены</th>
+                        <th>Время</th>
+                        <th>Заметки</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for shift in stat.shifts %}
+                    <tr>
+                        <td>{{ shift.date }}</td>
+                        <td>
+                            {% if shift.shift_type == 'morning' %}🌅 Утро
+                            {% elif shift.shift_type == 'day' %}☀️ День
+                            {% elif shift.shift_type == 'night' %}🌙 Вечер
+                            {% else %}🚫 Выходной
+                            {% endif %}
+                        </td>
+                        <td>{{ shift.start_time }} - {{ shift.end_time }}</td>
+                        <td>{{ shift.notes or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="color: var(--text-secondary); text-align: center;">Нет смен в этом месяце</p>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+
+<script>
+    function toggleCard(headerElement) {
+        var card = headerElement.closest('.user-card');
+        var body = card.querySelector('.user-card-body');
+        var icon = headerElement.querySelector('.expand-icon');
+        
+        if (body.classList.contains('open')) {
+            body.classList.remove('open');
+            icon.classList.remove('rotated');
+        } else {
+            body.classList.add('open');
+            icon.classList.add('rotated');
+        }
+    }
+</script>
+{% endblock %}

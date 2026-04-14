@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 style="margin: 2rem 0;">Мои смены</h1>
+
+<div class="card">
+    <div class="card-header">Смены на текущий месяц</div>
+    {% if shifts %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Тип смены</th>
+                    <th>Время</th>
+                    <th>Заметки</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for shift in shifts %}
+                <tr>
+                    <td>{{ shift.date }}</td>
+                    <td>
+                        {% if shift.shift_type == 'morning' %}🌅 Утро
+                        {% elif shift.shift_type == 'day' %}☀️ День
+                        {% elif shift.shift_type == 'night' %}🌙 Вечер
+                        {% elif shift.shift_type == 'vacation' %}🏖️ Отпуск
+                        {% else %}🚫 Выходной
+                        {% endif %}
+                    </td>
+                    <td>{{ shift.start_time }} - {{ shift.end_time }}</td>
+                    <td>{{ shift.notes or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% if not shifts %}
+    <p style="text-align: center; color: var(--text-secondary);">Смен на этот месяц пока нет</p>
+    {% endif %}
+</div>
+{% endblock %}
