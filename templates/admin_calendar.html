@@ -177,30 +177,49 @@
                             <a href="{{ url_for('delete_shift', shift_id=shift.id) }}" class="btn-small btn-danger" onclick="return confirm('Удалить отпуск?')">🗑️ Удалить</a>
                         </div>
                         {% else %}
-                        <div class="shift-{{ shift.shift_type }}">
-                            <strong>
-                                {% if shift.shift_type == 'morning' %}🌅 Утро
-                                {% elif shift.shift_type == 'day' %}☀️ День
-                                {% elif shift.shift_type == 'night' %}🌙 Вечер
-                                {% else %}🚫 Выходной
-                                {% endif %}
-                            </strong>
-                            <br>{{ shift.start_time }}-{{ shift.end_time }}
-                            
-                            {% set start_hour = shift.start_time.split(':')[0]|int %}
-                            {% set end_hour = shift.end_time.split(':')[0]|int %}
-                            {% if shift.shift_type != 'off' and (end_hour - start_hour) > 4 %}
-                                <br><small>🕐 {{ (end_hour - start_hour - 1) }} часов (с обедом)</small>
-                            {% elif shift.shift_type != 'off' %}
-                                <br><small>🕐 {{ (end_hour - start_hour) }} часов</small>
-                            {% endif %}
-                            
-                            {% if shift.notes %}
-                            <br><small>{{ shift.notes[:15] }}</small>
-                            {% endif %}
-                            <br>
-                            <a href="{{ url_for('delete_shift', shift_id=shift.id) }}" class="btn-small btn-danger" onclick="return confirm('Удалить смену?')">🗑️ Удалить</a>
-                        </div>
+                        {% if shift.shift_type == 'vacation' %}
+<div class="shift-vacation">
+    <strong>🏖️ Отпуск</strong>
+    {% if shift.notes %}
+    <br><small>{{ shift.notes[:15] }}</small>
+    {% endif %}
+    <br>
+    <a href="{{ url_for('delete_shift', shift_id=shift.id) }}" class="btn-small btn-danger" onclick="return confirm('Удалить отпуск?')">🗑️ Удалить</a>
+</div>
+{% elif shift.shift_type == 'off' %}
+<div class="shift-off">
+    <strong>🚫 Выходной</strong>
+    {% if shift.notes %}
+    <br><small>{{ shift.notes[:15] }}</small>
+    {% endif %}
+    <br>
+    <a href="{{ url_for('delete_shift', shift_id=shift.id) }}" class="btn-small btn-danger" onclick="return confirm('Удалить выходной?')">🗑️ Удалить</a>
+</div>
+{% else %}
+<div class="shift-{{ shift.shift_type }}">
+    <strong>
+        {% if shift.shift_type == 'morning' %}🌅 Утро
+        {% elif shift.shift_type == 'day' %}☀️ День
+        {% elif shift.shift_type == 'night' %}🌙 Вечер
+        {% endif %}
+    </strong>
+    <br>{{ shift.start_time }}-{{ shift.end_time }}
+    
+    {% set start_hour = shift.start_time.split(':')[0]|int %}
+    {% set end_hour = shift.end_time.split(':')[0]|int %}
+    {% if (end_hour - start_hour) > 4 %}
+        <br><small>🕐 {{ (end_hour - start_hour - 1) }} часов (с обедом)</small>
+    {% else %}
+        <br><small>🕐 {{ (end_hour - start_hour) }} часов</small>
+    {% endif %}
+    
+    {% if shift.notes %}
+    <br><small>{{ shift.notes[:15] }}</small>
+    {% endif %}
+    <br>
+    <a href="{{ url_for('delete_shift', shift_id=shift.id) }}" class="btn-small btn-danger" onclick="return confirm('Удалить смену?')">🗑️ Удалить</a>
+</div>
+{% endif %}
                         {% endif %}
                     {% else %}
                     <form method="POST" action="{{ url_for('add_shift') }}" style="margin-top: 0.5rem;">
@@ -209,8 +228,8 @@
                         
                         <select name="shift_type" style="width: 100%; margin-bottom: 0.25rem;">
                             <option value="morning">🌅 Утро (09-18)</option>
-                            <option value="day">☀️ День (12-21)</option>
-                            <option value="night">🌙 Вечер (21-06)</option>
+                            <option value="day">☀️ День (10-19)</option>
+                            <option value="night">🌙 Вечер (16-23)</option>
                             <option value="off">🚫 Выходной</option>
                             <option value="vacation">🏖️ Отпуск</option>
                         </select>
