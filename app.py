@@ -552,7 +552,16 @@ def add_user():
     email = request.form.get('email')
     password = request.form.get('password')
     role = request.form.get('role')
-    working_hours = float(request.form.get('working_hours', 8.0))
+    
+    # Получаем working_hours с проверкой на пустое значение
+    working_hours_str = request.form.get('working_hours', '8.0')
+    if not working_hours_str or working_hours_str.strip() == '':
+        working_hours = 8.0
+    else:
+        try:
+            working_hours = float(working_hours_str)
+        except ValueError:
+            working_hours = 8.0
     
     if User.query.filter_by(username=username).first():
         flash('Пользователь с таким именем уже существует', 'error')
