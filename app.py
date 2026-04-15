@@ -223,8 +223,20 @@ def add_shift_ajax():
         user_id = data.get('user_id')
         date_str = data.get('date')
         shift_type = data.get('shift_type')
-        start_time = data.get('start_time', '09:00')
-        end_time = data.get('end_time', '18:00')
+        
+        # Устанавливаем время в зависимости от типа смены
+        if shift_type == 'morning':
+            start_time = '09:00'
+            end_time = '18:00'
+        elif shift_type == 'day':
+            start_time = '10:00'
+            end_time = '19:00'
+        elif shift_type == 'night':
+            start_time = '16:00'
+            end_time = '23:00'
+        else:
+            start_time = '09:00'
+            end_time = '18:00'
         
         shift_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         
