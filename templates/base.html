@@ -9,39 +9,67 @@
 <body>
     {% if current_user.is_authenticated %}
     <nav class="navbar">
-        <div class="container">
-            <a href="{{ url_for('dashboard') }}" class="nav-brand">TimeTracker</a>
+        <div class="nav-container">
+            <div class="nav-brand">
+                <a href="{{ url_for('dashboard') }}">⏱️ TimeTracker</a>
+            </div>
             <div class="nav-menu">
                 {% if current_user.is_admin() %}
-                    <a href="{{ url_for('admin_calendar') }}">📅 Календарь смен</a>
-                    <a href="{{ url_for('admin_reports') }}">📊 Итоги</a>
-                    <a href="{{ url_for('admin_overtime_requests') }}">⏱️ Запросы часов</a>
-                    <a href="{{ url_for('admin_add_my_hours') }}">➕ Добавить часы</a>
-                    <a href="{{ url_for('admin') }}">👥 Управление</a>
-                    <a href="{{ url_for('import_schedule') }}">📥 Импорт графика</a>
+                    <a href="{{ url_for('admin_calendar') }}" class="nav-link">
+                        <span class="nav-icon">📅</span> Календарь смен
+                    </a>
+                    <a href="{{ url_for('admin_reports') }}" class="nav-link">
+                        <span class="nav-icon">📊</span> Итоги
+                    </a>
+                    <a href="{{ url_for('admin_overtime_requests') }}" class="nav-link">
+                        <span class="nav-icon">⏱️</span> Запросы часов
+                    </a>
+                    <a href="{{ url_for('admin_add_my_hours') }}" class="nav-link">
+                        <span class="nav-icon">➕</span> Добавить часы
+                    </a>
+                    <a href="{{ url_for('admin') }}" class="nav-link">
+                        <span class="nav-icon">👥</span> Управление
+                    </a>
+                    <a href="{{ url_for('import_schedule') }}" class="nav-link">
+                        <span class="nav-icon">📥</span> Импорт графика
+                    </a>
                 {% else %}
-                    <a href="{{ url_for('dashboard') }}">📊 Дашборд</a>
-                    <a href="{{ url_for('my_shifts') }}">📅 Мои смены</a>
-                    <a href="{{ url_for('overtime_request') }}">⏱️ Запрос на часы</a>
-                    <a href="{{ url_for('work_log') }}">📝 Рабочие дни</a>
+                    <a href="{{ url_for('dashboard') }}" class="nav-link">
+                        <span class="nav-icon">📊</span> Дашборд
+                    </a>
+                    <a href="{{ url_for('my_shifts') }}" class="nav-link">
+                        <span class="nav-icon">📅</span> Мои смены
+                    </a>
+                    <a href="{{ url_for('overtime_request') }}" class="nav-link">
+                        <span class="nav-icon">⏱️</span> Запрос на часы
+                    </a>
+                    <a href="{{ url_for('work_log') }}" class="nav-link">
+                        <span class="nav-icon">📝</span> Рабочие дни
+                    </a>
                 {% endif %}
-                <a href="{{ url_for('profile') }}">👤 Профиль</a>
-                <a href="{{ url_for('logout') }}">🚪 Выход</a>
+                <a href="{{ url_for('profile') }}" class="nav-link">
+                    <span class="nav-icon">👤</span> Профиль
+                </a>
+                <a href="{{ url_for('logout') }}" class="nav-link nav-logout">
+                    <span class="nav-icon">🚪</span> Выход
+                </a>
             </div>
         </div>
     </nav>
     {% endif %}
     
-    <div class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
-        {% block content %}{% endblock %}
+    <div class="main-container">
+        <div class="container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            {% block content %}{% endblock %}
+        </div>
     </div>
 </body>
 </html>

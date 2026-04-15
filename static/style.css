@@ -42,43 +42,120 @@ body {
     padding: 0 20px;
 }
 
-/* Навигация */
+/* ========== НАВИГАЦИЯ ========== */
 .navbar {
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
-    padding: 1rem 0;
     position: sticky;
     top: 0;
     z-index: 1000;
 }
 
-.navbar .container {
+.nav-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    height: 70px;
 }
 
-.nav-brand {
+.nav-brand a {
     font-size: 1.5rem;
     font-weight: 700;
     color: var(--accent-primary);
     text-decoration: none;
+    letter-spacing: -0.5px;
+    transition: opacity 0.3s;
+}
+
+.nav-brand a:hover {
+    opacity: 0.8;
 }
 
 .nav-menu {
     display: flex;
-    gap: 2rem;
+    gap: 0.5rem;
     align-items: center;
+    flex-wrap: wrap;
 }
 
-.nav-menu a {
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
     color: var(--text-secondary);
     text-decoration: none;
-    transition: color 0.3s;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.3s ease;
 }
 
-.nav-menu a:hover {
+.nav-link:hover {
+    background: var(--bg-tertiary);
     color: var(--accent-primary);
+}
+
+.nav-icon {
+    font-size: 1.1rem;
+}
+
+.nav-logout {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--accent-danger);
+}
+
+.nav-logout:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--accent-danger);
+}
+
+/* Адаптация для планшетов */
+@media (max-width: 1000px) {
+    .nav-container {
+        flex-direction: column;
+        height: auto;
+        padding: 1rem;
+        gap: 1rem;
+    }
+    
+    .nav-menu {
+        justify-content: center;
+        gap: 0.3rem;
+    }
+    
+    .nav-link {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* Адаптация для телефонов */
+@media (max-width: 700px) {
+    .nav-menu {
+        flex-wrap: wrap;
+    }
+}
+
+/* ========== ОСНОВНОЙ КОНТЕЙНЕР ========== */
+.main-container {
+    min-height: calc(100vh - 70px);
+    background: var(--bg-primary);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 2rem;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
 }
 
 /* Карточки */
