@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Открываем порт (порт вашего приложения)
-EXPOSE 5001
+EXPOSE 8080
 
 # КОМАНДА ЗАПУСКА (ЭТО САМОЕ ВАЖНОЕ!)
 CMD ["python", "app.py"]
