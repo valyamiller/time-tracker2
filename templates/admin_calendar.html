@@ -205,8 +205,8 @@
                             <option value="off">🚫 Выходной</option>
                             <option value="vacation">🏖️ Отпуск</option>
                         </select>
-                        <input type="time" class="shift-start-time" value="09:00" style="width: 48%; font-size: 0.7rem;">
-                        <input type="time" class="shift-end-time" value="18:00" style="width: 48%; font-size: 0.7rem;">
+                        <input type="time" class="shift-start-time" style="width: 48%; font-size: 0.7rem;">
+                        <input type="time" class="shift-end-time" style="width: 48%; font-size: 0.7rem;">
                         <button class="add-shift-btn btn-small btn-primary" style="width: 100%; margin-top: 0.25rem;">+</button>
                     </div>
                     {% endif %}
@@ -343,6 +343,7 @@ function updateCellAfterDelete(userId, date) {
         window.scrollTo(0, scrollPos);
         attachAddHandlers();
         attachDeleteHandlers();
+        setupTimePickers();
     }
 }
 
@@ -397,6 +398,43 @@ document.addEventListener('DOMContentLoaded', function() {
     attachAddHandlers();
     attachDeleteHandlers();
 });
+</script>
+<script>
+// Автоматическое изменение времени при выборе типа смены
+function setupTimePickers() {
+    document.querySelectorAll('.shift-type-select').forEach(function(select) {
+        select.removeEventListener('change', handleShiftTypeChange);
+        select.addEventListener('change', handleShiftTypeChange);
+    });
+}
+
+function handleShiftTypeChange(event) {
+    var container = event.target.closest('.add-shift-form');
+    var startInput = container.querySelector('.shift-start-time');
+    var endInput = container.querySelector('.shift-end-time');
+    
+    if (this.value === 'morning') {
+        startInput.value = '09:00';
+        endInput.value = '18:00';
+    } else if (this.value === 'day') {
+        startInput.value = '10:00';
+        endInput.value = '19:00';
+    } else if (this.value === 'night') {
+        startInput.value = '16:00';
+        endInput.value = '23:00';
+    } else {
+        startInput.value = '';
+        endInput.value = '';
+    }
+}
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', function() {
+    setupTimePickers();
+});
+
+// Экспортируем функции для использования после динамического обновления
+window.setupTimePickers = setupTimePickers;
 </script>
 
 {% endblock %}
