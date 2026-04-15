@@ -259,5 +259,20 @@
         }
     });
 </script>
+<script>
+    // Прокрутка к якорю после загрузки страницы
+    if (window.location.hash) {
+        var hash = window.location.hash.substring(1);
+        setTimeout(function() {
+            var elements = document.querySelectorAll('.calendar-day');
+            for (var i = 0; i < elements.length; i++) {
+                if (elements[i].innerText == hash.split('-')[2]) {
+                    elements[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    break;
+                }
+            }
+        }, 500);
+    }
+</script>
 
 {% endblock %}

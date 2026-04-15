@@ -286,14 +286,15 @@ def add_shift():
         )
         db.session.add(work_entry)
     
-    db.session.commit()
+        db.session.commit()
     flash('Смена сохранена', 'success')
     
     # Получаем дату для якоря
     anchor_date = request.form.get('anchor_date')
     if anchor_date:
-        return redirect(url_for('admin_calendar', year=shift_date.year, month=shift_date.month, _anchor=date_str))
-    return redirect(url_for('admin_calendar', year=shift_date.year, month=shift_date.month)) 
+        # Используем anchor_date, а не date_str
+        return redirect(url_for('admin_calendar', year=shift_date.year, month=shift_date.month, _anchor=anchor_date))
+    return redirect(url_for('admin_calendar', year=shift_date.year, month=shift_date.month))
 
 @app.route('/admin/delete_shift/<int:shift_id>')
 @login_required
