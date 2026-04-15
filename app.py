@@ -152,7 +152,7 @@ def admin_calendar():
         year = today.year
         month = today.month
     
-    users = User.query.filter_by(is_active=True).all()
+    users = User.query.filter(User.is_active == True, User.username != 'admin').all()
     
     start_date = date(year, month, 1)
     if month == 12:
@@ -459,7 +459,7 @@ def admin_reports():
     else:
         end_date = date(year, month + 1, 1) - timedelta(days=1)
     
-    users = User.query.filter_by(is_active=True).all()
+    users = User.query.filter(User.is_active == True, User.username != 'admin').all()
     
     user_stats = []
     for user in users:
