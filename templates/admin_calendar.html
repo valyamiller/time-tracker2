@@ -2,11 +2,11 @@
 
 {% block content %}
 <style>
-    .calendar-container {
+        .calendar-container {
         background: var(--bg-secondary);
         border-radius: 12px;
         padding: 1rem;
-        overflow-x: auto;
+        overflow-x: visible;
     }
     
     .calendar-header {
@@ -49,7 +49,7 @@
         border: 1px solid var(--border-color);
         padding: 0.5rem;
         vertical-align: top;
-        min-width: 100px;
+        min-width: 80px;
     }
     
     .user-cell {
@@ -223,8 +223,9 @@
                         {% endif %}
                     {% else %}
                     <form method="POST" action="{{ url_for('add_shift') }}" style="margin-top: 0.5rem;">
-                        <input type="hidden" name="user_id" value="{{ user.id }}">
-                        <input type="hidden" name="date" value="{{ day.date.isoformat() }}">
+    <input type="hidden" name="user_id" value="{{ user.id }}">
+    <input type="hidden" name="date" value="{{ day.date.isoformat() }}">
+    <input type="hidden" name="anchor_date" value="{{ day.date.isoformat() }}">
                         
                         <select name="shift_type" style="width: 100%; margin-bottom: 0.25rem;">
                             <option value="morning">🌅 Утро (09-18)</option>
@@ -265,5 +266,17 @@
         <p>✓ Отпуск: 0 часов</p>
     </div>
 </div>
-
+<script>
+    // Прокрутка к сохранённой позиции
+    var anchor = window.location.hash.substring(1);
+    if (anchor) {
+        var elements = document.querySelectorAll('td');
+        for (var i = 0; i < elements.length; i++) {
+            if (elements[i].innerText.indexOf(anchor) !== -1) {
+                elements[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                break;
+            }
+        }
+    }
+</script>
 {% endblock %}
