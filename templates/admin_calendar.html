@@ -331,19 +331,20 @@ function updateCellAfterDelete(userId, date) {
             '<div class="add-shift-form" data-user="' + userId + '" data-date="' + date + '">' +
             '<select class="shift-type-select" style="width: 100%; margin-bottom: 0.25rem;">' +
             '<option value="morning">🌅 Утро (09:00-18:00)</option>' +
-            '<option value="day">☀️ День (12:00-21:00)</option>' +
-            '<option value="night">🌙 Вечер (21:00-06:00)</option>' +
+            '<option value="day">☀️ День (10:00-19:00)</option>' +
+            '<option value="night">🌙 Вечер (16:00-23:00)</option>' +
             '<option value="off">🚫 Выходной</option>' +
             '<option value="vacation">🏖️ Отпуск</option>' +
             '</select>' +
-            '<input type="time" class="shift-start-time" value="09:00" style="width: 48%; font-size: 0.7rem;">' +
-            '<input type="time" class="shift-end-time" value="18:00" style="width: 48%; font-size: 0.7rem;">' +
+            '<input type="time" class="shift-start-time" style="width: 48%; font-size: 0.7rem;">' +
+            '<input type="time" class="shift-end-time" style="width: 48%; font-size: 0.7rem;">' +
             '<button class="add-shift-btn btn-small btn-primary" style="width: 100%; margin-top: 0.25rem;">+</button>' +
             '</div>';
         window.scrollTo(0, scrollPos);
         attachAddHandlers();
         attachDeleteHandlers();
-        setupTimePickers();
+        window.setupTimePickers();
+        window.forceSetTimeForSelects();
     }
 }
 
@@ -428,13 +429,38 @@ function handleShiftTypeChange(event) {
     }
 }
 
+// Принудительная установка времени для всех существующих select
+function forceSetTimeForSelects() {
+    document.querySelectorAll('.shift-type-select').forEach(function(select) {
+        var container = select.closest('.add-shift-form');
+        var startInput = container.querySelector('.shift-start-time');
+        var endInput = container.querySelector('.shift-end-time');
+        
+        // Если время ещё не установлено, устанавливаем по текущему значению select
+        if (startInput && (!startInput.value || startInput.value === '')) {
+            if (select.value === 'morning') {
+                startInput.value = '09:00';
+                endInput.value = '18:00';
+            } else if (select.value === 'day') {
+                startInput.value = '10:00';
+                endInput.value = '19:00';
+            } else if (select.value === 'night') {
+                startInput.value = '16:00';
+                endInput.value = '23:00';
+            }
+        }
+    });
+}
+
 // Инициализация
 document.addEventListener('DOMContentLoaded', function() {
     setupTimePickers();
+    forceSetTimeForSelects();
 });
 
-// Экспортируем функции для использования после динамического обновления
+// Экспортируем функции
 window.setupTimePickers = setupTimePickers;
+window.forceSetTimeForSelects = forceSetTimeForSelects;
 </script>
 
 {% endblock %}
