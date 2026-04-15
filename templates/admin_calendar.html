@@ -127,6 +127,40 @@
         cursor: pointer;
         font-size: 0.7rem;
     }
+        /* Выравнивание календаря по центру */
+    .calendar-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+    
+    .calendar-table {
+        margin: 0 auto;
+        width: auto;
+        min-width: 80%;
+        max-width: 100%;
+    }
+    
+    /* Выравнивание заголовков */
+    .calendar-table th,
+    .calendar-table td {
+        text-align: center;
+        vertical-align: top;
+    }
+    
+    /* Фиксируем первую колонку с именами сотрудников */
+    .calendar-table th:first-child,
+    .calendar-table td:first-child {
+        position: sticky;
+        left: 0;
+        background: var(--bg-secondary);
+        z-index: 1;
+    }
+    
+    .calendar-table th:first-child {
+        z-index: 2;
+    }
 </style>
 
 <div class="calendar-header">
@@ -138,8 +172,10 @@
     </div>
 </div>
 
-<div class="calendar-container">
-    <table class="calendar-table">
+<div class="calendar-wrapper">
+    <div class="calendar-container">
+        <table class="calendar-table">
+            </table>
         <thead>
             <tr>
                 <th>Сотрудник</th>
@@ -280,8 +316,39 @@
     }
     
 </script>
-<script>
-// минимальный скрипт - ничего не делает
-console.log('Calendar loaded');
-</script>
+    /* Выравнивание календаря по центру */
+    .calendar-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+    
+    .calendar-table {
+        margin: 0 auto;
+        width: auto;
+        min-width: 80%;
+        max-width: 100%;
+    }
+    
+    /* Выравнивание заголовков */
+    .calendar-table th,
+    .calendar-table td {
+        text-align: center;
+        vertical-align: top;
+    }
+    
+    /* Фиксируем первую колонку с именами сотрудников */
+    .calendar-table th:first-child,
+    .calendar-table td:first-child {
+        position: sticky;
+        left: 0;
+        background: var(--bg-secondary);
+        z-index: 1;
+    }
+    
+    .calendar-table th:first-child {
+        z-index: 2;
+    }
+
 {% endblock %}
