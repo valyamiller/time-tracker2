@@ -224,19 +224,9 @@ def add_shift_ajax():
         date_str = data.get('date')
         shift_type = data.get('shift_type')
         
-        # Устанавливаем время в зависимости от типа смены
-        if shift_type == 'morning':
-            start_time = '09:00'
-            end_time = '18:00'
-        elif shift_type == 'day':
-            start_time = '10:00'
-            end_time = '19:00'
-        elif shift_type == 'night':
-            start_time = '16:00'
-            end_time = '23:00'
-        else:
-            start_time = '09:00'
-            end_time = '18:00'
+        # БЕРЁМ ВРЕМЯ ИЗ ЗАПРОСА (индивидуальное), а не устанавливаем принудительно
+        start_time = data.get('start_time', '09:00')
+        end_time = data.get('end_time', '18:00')
         
         shift_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         
@@ -258,7 +248,7 @@ def add_shift_ajax():
         
         hours_worked = round(hours_worked, 1)
         
-        # Сохраняем смену
+        # Сохраняем смену С ИНДИВИДУАЛЬНЫМ ВРЕМЕНЕМ
         existing_shift = Shift.query.filter_by(user_id=user_id, date=shift_date).first()
         
         if existing_shift:
@@ -294,12 +284,13 @@ def add_shift_ajax():
         
         db.session.commit()
         
-        return jsonify({'success': True, 'message': 'Смена добавлена'})
+        # Возвращаем сохранённое время для обновления ячейки
+        return jsonify({'success': True, 'message': 'Смена добавлена', 'start_time': start_time, 'end_time': end_time})
         
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
-
+    
 @app.route('/admin/delete_shift_ajax', methods=['POST'])
 @login_required
 @admin_required
