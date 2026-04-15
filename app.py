@@ -995,20 +995,16 @@ def export_schedule():
             col = day_info['col']
             
             if shift:
-                if shift.shift_type == 'morning':
-                    value = 'утро'
-                elif shift.shift_type == 'day':
-                    value = 'день'
-                elif shift.shift_type == 'night':
-                    value = 'вечер'
-                elif shift.shift_type == 'off':
+                if shift.shift_type == 'off':
                     value = 'выходной'
                 elif shift.shift_type == 'vacation':
                     value = 'отпуск'
                 else:
-                    value = ''
+                    # Для рабочих смен выводим фактическое время
+                    value = f'{shift.start_time}-{shift.end_time}'
             else:
                 value = ''
+           
             
             ws.cell(row=row, column=col, value=value)
             ws.cell(row=row, column=col).alignment = center_align
