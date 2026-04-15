@@ -888,6 +888,7 @@ def import_schedule():
 @admin_required
 def export_schedule():
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
     
     year = request.args.get('year', type=int)
     month = request.args.get('month', type=int)
@@ -929,12 +930,14 @@ def export_schedule():
     )
     center_align = Alignment(horizontal='center', vertical='center')
     
+    # Заголовок "Сотрудник"
     ws.cell(row=1, column=1, value="Сотрудник")
     ws.cell(row=1, column=1).font = header_font
     ws.cell(row=1, column=1).fill = header_fill
     ws.cell(row=1, column=1).alignment = center_align
     ws.cell(row=1, column=1).border = thin_border
     
+    # Создаем список дней месяца
     current_date = start_date
     col = 2
     days_in_month = []
@@ -954,6 +957,7 @@ def export_schedule():
         current_date += timedelta(days=1)
         col += 1
     
+    # Заполняем данные
     row = 2
     for user in users:
         ws.cell(row=row, column=1, value=user.username)
@@ -989,8 +993,10 @@ def export_schedule():
         
         row += 1
     
-    for col in range(1, len(days_in_month) + 2):
-        ws.column_dimensions[chr(64 + col)].width = 12
+    # Автоматическая ширина колонок (используем get_column_letter)
+    for col_num in range(1, len(days_in_month) + 2):
+        col_letter = get_column_letter(col_num)
+        ws.column_dimensions[col_letter].width = 12
     
     output = BytesIO()
     wb.save(output)
