@@ -210,13 +210,20 @@
     </div>
     <div class="user-card-body">
         <div style="margin-bottom: 1rem;">
-            <strong>📈 Смены по типам:</strong><br>
-            <span class="shift-badge shift-morning">🌅 Утро: {{ stat.shift_count.morning }}</span>
-            <span class="shift-badge shift-day">☀️ День: {{ stat.shift_count.day }}</span>
-            <span class="shift-badge shift-night">🌙 Вечер: {{ stat.shift_count.night }}</span>
-            <span class="shift-badge shift-off">🚫 Выходные: {{ stat.shift_count.off }}</span>
-            <span class="shift-badge shift-vacation">🏖️ Отпуск: {{ stat.shift_count.vacation }}</span>
-        </div>
+    <strong>📈 Смены по типам:</strong><br>
+    <span class="shift-badge shift-morning">🌅 Утро: {{ stat.shift_count.morning }}</span>
+    <span class="shift-badge shift-day">☀️ День: {{ stat.shift_count.day }}</span>
+    <span class="shift-badge shift-night">🌙 Вечер: {{ stat.shift_count.night }}</span>
+    <span class="shift-badge shift-off">🚫 Выходные: {{ stat.shift_count.off }}</span>
+    <span class="shift-badge shift-vacation">🏖️ Отпуск: {{ stat.shift_count.vacation }}</span>
+</div>
+<div style="margin-bottom: 1rem;">
+    <strong>📊 Итого:</strong><br>
+    📅 Рабочих смен: {{ stat.total_shifts }}<br>
+    🚫 Выходных дней: {{ stat.total_days_off }}<br>
+    🏖️ Дней отпуска: {{ stat.vacation_days }}<br>
+    ⏱️ Всего часов: {{ "%.1f"|format(stat.total_hours) }}
+</div>
         
         {% if stat.shifts %}
         <div class="table-container">
