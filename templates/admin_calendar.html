@@ -155,7 +155,7 @@
                 {% for day in days %}
                 {% set shift = shifts_dict.get((user.id, day.date)) %}
                 {% set vacation = vacations_dict.get((user.id, day.date)) %}
-                <td class="{% if day.is_weekend %}weekend{% endif %}" data-date="{{ day.date.isoformat() }}">
+                <td class="{% if day.is_weekend %}weekend{% endif %}" data-user="{{ user.id }}" data-date="{{ day.date.isoformat() }}">
                     <div class="calendar-day">{{ day.date.day }}</div>
                     
                     {% if vacation %}
@@ -311,6 +311,125 @@ document.querySelectorAll('.shift-submit').forEach(button => {
         var shiftType = select.value;
         addShift(userId, date, shiftType);
     });
+});
+</script>
+<script>
+// Функция добавления смены через AJAX
+function addShift(userId, date, shiftType) {
+    fetch('/admin/add_shift_ajax', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            user_id: userId,
+            date: date,
+            shift_type: shiftType
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Обновляем только эту ячейку, не перезагружая страницу
+            updateCell(userId, date, shiftType);
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ошибка при добавлении смены');
+    });
+}
+
+// Функция обновления ячейки
+function updateCell(userId, date, shiftType) {
+    var cell = document.querySelector('td[data-user="' + userId + '"][data-date="' + date + '"]');
+    if (cell) {
+        // Сохраняем позицию прокрутки
+        var scrollPos = window.scrollY;
+        
+        // Обновляем содержимое ячейки
+        if (shiftType === 'off') {
+            cell.innerHTML = '<div class="calendar-day">' + date.split('-')[2] + '</div>' +
+                '<div class="shift-off"><strong>🚫 Выходной</strong><br>' +
+                '<a href="#" class="btn-small btn-danger" onclick="deleteShift(' + userId + ', \'' + date + '\')">🗑️</a></div>';
+        } else if (shiftType === 'vacation') {
+            cell.innerHTML = '<div class="calendar-day">' + date.split('-')[2] + '</div>' +
+                '<div class="shift-vacation"><strong>🏖️ Отпуск</strong><br>' +
+                '<a href="#" class="btn-small btn-danger" onclick="deleteShift(' + userId + ', \'' + date + '\')">🗑️</a></div>';
+        } else {
+            var shiftName = shiftType === 'morning' ? '🌅 Утро' : (shiftType === 'day' ? '☀️ День' : '🌙 Вечер');
+            cell.innerHTML = '<div class="calendar-day">' + date.split('-')[2] + '</div>' +
+                '<div class="shift-' + shiftType + '"><strong>' + shiftName + '</strong><br>' +
+                '<a href="#" class="btn-small btn-danger" onclick="deleteShift(' + userId + ', \'' + date + '\')">🗑️</a></div>';
+        }
+        
+        // Восстанавливаем позицию прокрутки
+        window.scrollTo(0, scrollPos);
+    }
+}
+
+// Функция удаления смены
+function deleteShift(userId, date) {
+    if (confirm('Удалить смену?')) {
+        fetch('/admin/delete_shift_ajax', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                user_id: userId,
+                date: date
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Восстанавливаем форму в ячейке
+                var cell = document.querySelector('td[data-user="' + userId + '"][data-date="' + date + '"]');
+                var scrollPos = window.scrollY;
+                cell.innerHTML = '<div class="calendar-day">' + date.split('-')[2] + '</div>' +
+                    '<div class="add-shift-form" data-user="' + userId + '" data-date="' + date + '">' +
+                    '<select class="shift-type-select" style="width: 100%; margin-bottom: 0.25rem;">' +
+                    '<option value="morning">🌅 Утро</option>' +
+                    '<option value="day">☀️ День</option>' +
+                    '<option value="night">🌙 Вечер</option>' +
+                    '<option value="off">🚫 Выходной</option>' +
+                    '<option value="vacation">🏖️ Отпуск</option>' +
+                    '</select>' +
+                    '<button class="add-shift-btn" style="width: 100%;">+</button>' +
+                    '</div>';
+                window.scrollTo(0, scrollPos);
+                // Перепривязываем обработчики
+                attachEventHandlers();
+            } else {
+                alert('Ошибка: ' + data.error);
+            }
+        });
+    }
+}
+
+// Привязка обработчиков к кнопкам
+function attachEventHandlers() {
+    document.querySelectorAll('.add-shift-btn').forEach(button => {
+        button.removeEventListener('click', handleAddShift);
+        button.addEventListener('click', handleAddShift);
+    });
+}
+
+function handleAddShift(event) {
+    var container = event.target.closest('.add-shift-form');
+    var userId = container.dataset.user;
+    var date = container.dataset.date;
+    var select = container.querySelector('.shift-type-select');
+    var shiftType = select.value;
+    addShift(userId, date, shiftType);
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    attachEventHandlers();
 });
 </script>
 

@@ -743,6 +743,35 @@ def add_shift_ajax():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/admin/delete_shift_ajax', methods=['POST'])
+@login_required
+@admin_required
+def delete_shift_ajax():
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        date_str = data.get('date')
+        
+        shift_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # Находим и удаляем смену
+        shift = Shift.query.filter_by(user_id=user_id, date=shift_date).first()
+        if shift:
+            db.session.delete(shift)
+        
+        # Удаляем запись о часах
+        work_entry = WorkEntry.query.filter_by(user_id=user_id, date=shift_date).first()
+        if work_entry:
+            db.session.delete(work_entry)
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Смена удалена'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
 # Админ: добавить часы себе
 @app.route('/admin/add_my_hours', methods=['GET', 'POST'])
 @login_required
