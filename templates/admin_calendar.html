@@ -195,18 +195,16 @@
                         </div>
                         {% endif %}
                     {% else %}
-                    <form method="POST" action="{{ url_for('add_shift') }}" style="margin-top: 0.5rem;">
-                        <input type="hidden" name="user_id" value="{{ user.id }}">
-                        <input type="hidden" name="date" value="{{ day.date.isoformat() }}">
-                        <select name="shift_type" style="width: 100%; margin-bottom: 0.25rem;">
-                            <option value="morning">🌅 Утро</option>
-                            <option value="day">☀️ День</option>
-                            <option value="night">🌙 Вечер</option>
-                            <option value="off">🚫 Выходной</option>
-                            <option value="vacation">🏖️ Отпуск</option>
-                        </select>
-                        <button type="submit" style="width: 100%;">+</button>
-                    </form>
+                   <div class="shift-form-{{ user.id }}-{{ day.date.isoformat() }}">
+    <select class="shift-select" data-user="{{ user.id }}" data-date="{{ day.date.isoformat() }}" style="width: 100%; margin-bottom: 0.25rem;">
+        <option value="morning">🌅 Утро</option>
+        <option value="day">☀️ День</option>
+        <option value="night">🌙 Вечер</option>
+        <option value="off">🚫 Выходной</option>
+        <option value="vacation">🏖️ Отпуск</option>
+    </select>
+    <button class="shift-submit" data-user="{{ user.id }}" data-date="{{ day.date.isoformat() }}" style="width: 100%;">+</button>
+</div>
                     {% endif %}
                 </td>
                 {% endfor %}
@@ -273,6 +271,47 @@
             }
         }, 500);
     }
+</script>
+<script>
+// Функция для отправки AJAX запроса
+function addShift(userId, date, shiftType) {
+    fetch('/admin/add_shift_ajax', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            user_id: userId,
+            date: date,
+            shift_type: shiftType
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Обновляем ячейку календаря
+            location.reload(); // Простой способ - перезагрузить страницу
+            // Или можно обновить только ячейку, но это сложнее
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Ошибка при добавлении смены');
+    });
+}
+
+// Навешиваем обработчики на кнопки
+document.querySelectorAll('.shift-submit').forEach(button => {
+    button.addEventListener('click', function() {
+        var userId = this.dataset.user;
+        var date = this.dataset.date;
+        var select = document.querySelector('.shift-select[data-user="' + userId + '"][data-date="' + date + '"]');
+        var shiftType = select.value;
+        addShift(userId, date, shiftType);
+    });
+});
 </script>
 
 {% endblock %}

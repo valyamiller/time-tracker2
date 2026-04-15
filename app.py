@@ -661,6 +661,88 @@ def admin_save_hours():
     flash(f'Добавлено {hours} часов пользователю', 'success')
     return redirect(url_for('admin'))
 
+@app.route('/admin/add_shift_ajax', methods=['POST'])
+@login_required
+@admin_required
+def add_shift_ajax():
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        date_str = data.get('date')
+        shift_type = data.get('shift_type')
+        
+        # Устанавливаем время по умолчанию для типа смены
+        if shift_type == 'morning':
+            start_time = '09:00'
+            end_time = '18:00'
+        elif shift_type == 'day':
+            start_time = '12:00'
+            end_time = '21:00'
+        elif shift_type == 'night':
+            start_time = '21:00'
+            end_time = '06:00'
+        elif shift_type == 'off':
+            start_time = '00:00'
+            end_time = '00:00'
+        elif shift_type == 'vacation':
+            start_time = '00:00'
+            end_time = '00:00'
+        else:
+            start_time = '09:00'
+            end_time = '18:00'
+        
+        shift_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # Расчет часов
+        start_hour = int(start_time.split(':')[0])
+        end_hour = int(end_time.split(':')[0])
+        
+        if shift_type == 'vacation' or shift_type == 'off':
+            hours_worked = 0
+        else:
+            hours_worked = end_hour - start_hour
+            if hours_worked > 4:
+                hours_worked = hours_worked - 1
+        
+        # Сохраняем смену
+        existing_shift = Shift.query.filter_by(user_id=user_id, date=shift_date).first()
+        
+        if existing_shift:
+            existing_shift.shift_type = shift_type
+            existing_shift.start_time = start_time
+            existing_shift.end_time = end_time
+        else:
+            shift = Shift(
+                user_id=user_id,
+                date=shift_date,
+                shift_type=shift_type,
+                start_time=start_time,
+                end_time=end_time
+            )
+            db.session.add(shift)
+        
+        # Сохраняем запись о часах
+        existing_work = WorkEntry.query.filter_by(user_id=user_id, date=shift_date).first()
+        
+        if existing_work:
+            existing_work.hours_worked = hours_worked
+        else:
+            work_entry = WorkEntry(
+                user_id=user_id,
+                date=shift_date,
+                hours_worked=hours_worked,
+                description=f"Смена: {shift_type}"
+            )
+            db.session.add(work_entry)
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Смена добавлена'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
 # Админ: добавить часы себе
 @app.route('/admin/add_my_hours', methods=['GET', 'POST'])
 @login_required
