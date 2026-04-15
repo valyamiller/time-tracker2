@@ -936,7 +936,7 @@ def export_schedule():
     
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="3b82f6", end_color="3b82f6", fill_type="solid")
-    weekend_fill = PatternFill(start_color="ef4444", end_color="ef4444", fill_type="solid")
+    weekend_fill = PatternFill(start_color="f59e0b", end_color="f59e0b", fill_type="solid")
     total_fill = PatternFill(start_color="10b981", end_color="10b981", fill_type="solid")
     total_font = Font(bold=True, color="FFFFFF")
     thin_border = Border(
