@@ -463,37 +463,62 @@ def admin_reports():
     
     user_stats = []
     for user in users:
+        # Смены за месяц (только рабочие смены, не выходные и не отпуск)
         shifts = Shift.query.filter(
             Shift.user_id == user.id,
             Shift.date >= start_date,
-            Shift.date <= end_date
+            Shift.date <= end_date,
+            Shift.shift_type.in_(['morning', 'day', 'night'])  # Только рабочие смены
         ).all()
         
-        work_entries = WorkEntry.query.filter(
-            WorkEntry.user_id == user.id,
-            WorkEntry.date >= start_date,
-            WorkEntry.date <= end_date
+        # Выходные дни (тип 'off')
+        days_off = Shift.query.filter(
+            Shift.user_id == user.id,
+            Shift.date >= start_date,
+            Shift.date <= end_date,
+            Shift.shift_type == 'off'
         ).all()
         
-        vacations = Vacation.query.filter(
+        # Отпуска (тип 'vacation')
+        vacations = Shift.query.filter(
+            Shift.user_id == user.id,
+            Shift.date >= start_date,
+            Shift.date <= end_date,
+            Shift.shift_type == 'vacation'
+        ).all()
+        
+        # Также учитываем одобренные заявки на отпуск из таблицы Vacation
+        vacation_requests = Vacation.query.filter(
             Vacation.user_id == user.id,
             Vacation.status == 'approved',
             Vacation.start_date <= end_date,
             Vacation.end_date >= start_date
         ).all()
         
-        vacation_days = 0
-        for vac in vacations:
+        # Считаем дни отпуска из заявок
+        vacation_days_from_requests = 0
+        for vac in vacation_requests:
             vac_start = max(vac.start_date, start_date)
             vac_end = min(vac.end_date, end_date)
-            vacation_days += (vac_end - vac_start).days + 1
+            vacation_days_from_requests += (vac_end - vac_start).days + 1
         
+        # Всего дней отпуска (из смен + из заявок)
+        total_vacation_days = len(vacations) + vacation_days_from_requests
+        
+        # Рабочие часы за месяц
+        work_entries = WorkEntry.query.filter(
+            WorkEntry.user_id == user.id,
+            WorkEntry.date >= start_date,
+            WorkEntry.date <= end_date
+        ).all()
+        
+        # Подсчёт смен по типам
         shift_count = {
             'morning': 0,
             'day': 0,
             'night': 0,
-            'off': 0,
-            'vacation': 0
+            'off': len(days_off),
+            'vacation': total_vacation_days
         }
         for shift in shifts:
             shift_count[shift.shift_type] += 1
@@ -502,17 +527,21 @@ def admin_reports():
         
         user_stats.append({
             'user': user,
-            'shifts': shifts,
+            'shifts': shifts,  # только рабочие смены
+            'days_off': days_off,
+            'vacations': vacations,
+            'vacation_days': total_vacation_days,
             'shift_count': shift_count,
-            'total_shifts': len(shifts),
+            'total_shifts': len(shifts),  # только рабочие смены
+            'total_days_off': len(days_off),
             'total_hours': total_hours,
-            'vacation_days': vacation_days,
             'work_entries': work_entries
         })
     
     total_shifts_all = sum(stat['total_shifts'] for stat in user_stats)
     total_hours_all = sum(stat['total_hours'] for stat in user_stats)
     total_vacation_days_all = sum(stat['vacation_days'] for stat in user_stats)
+    total_days_off_all = sum(stat['total_days_off'] for stat in user_stats)
     
     prev_month = month - 1 if month > 1 else 12
     prev_year = year if month > 1 else year - 1
@@ -533,8 +562,8 @@ def admin_reports():
                          next_month=next_month,
                          total_shifts_all=total_shifts_all,
                          total_hours_all=total_hours_all,
-                         total_vacation_days_all=total_vacation_days_all)
-
+                         total_vacation_days_all=total_vacation_days_all,
+                         total_days_off_all=total_days_off_all)
 # Запрос на дополнительные часы
 @app.route('/overtime_request', methods=['GET', 'POST'])
 @login_required
