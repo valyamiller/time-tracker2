@@ -9,6 +9,7 @@ from sqlalchemy import func
 import os
 import openpyxl
 from io import BytesIO
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
@@ -107,6 +108,7 @@ def work_log():
         db.session.commit()
         flash('Рабочий день успешно добавлен!', 'success')
         return redirect(url_for('work_log'))
+        return render_template('import_schedule.html', now=date.today())
     
     entries = WorkEntry.query.filter_by(user_id=current_user.id).order_by(WorkEntry.date.desc()).all()
     return render_template('work_log.html', entries=entries)
@@ -467,6 +469,141 @@ def import_schedule():
             return redirect(url_for('import_schedule'))
     
     return render_template('import_schedule.html')
+
+@app.route('/admin/export_schedule')
+@login_required
+@admin_required
+def export_schedule():
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from io import BytesIO
+    
+    # Получаем параметры месяца
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+    
+    today = date.today()
+    if not year or not month:
+        year = today.year
+        month = today.month
+    
+    # Начало и конец месяца
+    start_date = date(year, month, 1)
+    if month == 12:
+        end_date = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_date = date(year, month + 1, 1) - timedelta(days=1)
+    
+    # Получаем всех активных пользователей (кроме admin)
+    users = User.query.filter(User.is_active == True, User.username != 'admin').all()
+    
+    # Получаем смены за месяц
+    shifts = Shift.query.filter(
+        Shift.date >= start_date,
+        Shift.date <= end_date
+    ).all()
+    
+    # Создаём словарь смен для быстрого доступа
+    shifts_dict = {}
+    for shift in shifts:
+        shifts_dict[(shift.user_id, shift.date)] = shift
+    
+    # Создаём Excel-файл
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"График_{month}_{year}"
+    
+    # Стили
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="3b82f6", end_color="3b82f6", fill_type="solid")
+    weekend_fill = PatternFill(start_color="ef4444", end_color="ef4444", fill_type="solid")
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    center_align = Alignment(horizontal='center', vertical='center')
+    
+    # Заголовки: первая колонка - Сотрудник, остальные - даты
+    ws.cell(row=1, column=1, value="Сотрудник")
+    ws.cell(row=1, column=1).font = header_font
+    ws.cell(row=1, column=1).fill = header_fill
+    ws.cell(row=1, column=1).alignment = center_align
+    ws.cell(row=1, column=1).border = thin_border
+    
+    current_date = start_date
+    col = 2
+    days_in_month = []
+    while current_date <= end_date:
+        ws.cell(row=1, column=col, value=current_date.strftime('%Y-%m-%d'))
+        ws.cell(row=1, column=col).font = header_font
+        ws.cell(row=1, column=col).fill = header_fill
+        ws.cell(row=1, column=col).alignment = center_align
+        ws.cell(row=1, column=col).border = thin_border
+        
+        days_in_month.append({
+            'date': current_date,
+            'col': col,
+            'is_weekend': current_date.weekday() >= 5
+        })
+        
+        current_date += timedelta(days=1)
+        col += 1
+    
+    # Заполняем данные сотрудников
+    row = 2
+    for user in users:
+        ws.cell(row=row, column=1, value=user.username)
+        ws.cell(row=row, column=1).alignment = center_align
+        ws.cell(row=row, column=1).border = thin_border
+        
+        for day_info in days_in_month:
+            shift = shifts_dict.get((user.id, day_info['date']))
+            col = day_info['col']
+            
+            if shift:
+                if shift.shift_type == 'morning':
+                    value = 'утро'
+                elif shift.shift_type == 'day':
+                    value = 'день'
+                elif shift.shift_type == 'night':
+                    value = 'вечер'
+                elif shift.shift_type == 'off':
+                    value = 'выходной'
+                elif shift.shift_type == 'vacation':
+                    value = 'отпуск'
+                else:
+                    value = ''
+            else:
+                value = ''
+            
+            ws.cell(row=row, column=col, value=value)
+            ws.cell(row=row, column=col).alignment = center_align
+            ws.cell(row=row, column=col).border = thin_border
+            
+            # Заливаем выходные дни
+            if day_info['is_weekend']:
+                ws.cell(row=row, column=col).fill = weekend_fill
+        
+        row += 1
+    
+    # Автоматически подгоняем ширину колонок
+    for col in range(1, len(days_in_month) + 2):
+        ws.column_dimensions[chr(64 + col)].width = 12
+    
+    # Сохраняем в буфер
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    # Отправляем файл
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'graphic_{year}_{month}.xlsx'
+    )
     
 @app.route('/admin/delete_shift_ajax', methods=['POST'])
 @login_required

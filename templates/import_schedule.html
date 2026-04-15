@@ -17,6 +17,28 @@
         background: rgba(59, 130, 246, 0.1);
     }
     
+    .export-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .export-btn {
+        flex: 1;
+        text-align: center;
+        padding: 1rem;
+        background: var(--accent-primary);
+        border-radius: 8px;
+        text-decoration: none;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .export-btn:hover {
+        opacity: 0.9;
+    }
+    
     .example-table {
         margin-top: 2rem;
         overflow-x: auto;
@@ -38,15 +60,20 @@
     }
 </style>
 
-<h1 style="margin: 2rem 0;">📥 Импорт графика из Excel</h1>
+<h1 style="margin: 2rem 0;">📊 График смен</h1>
+
+<div class="export-buttons">
+    <a href="{{ url_for('export_schedule', year=now.year, month=now.month) }}" class="export-btn">📅 Экспорт текущий месяц</a>
+    <a href="{{ url_for('export_schedule', year=now.year, month=now.month+1 if now.month < 12 else 1) }}" class="export-btn">📅 Экспорт следующий месяц</a>
+</div>
 
 <div class="card">
-    <div class="card-header">Загрузить файл</div>
+    <div class="card-header">📥 Импорт графика (дополнительно)</div>
     
     <form method="POST" enctype="multipart/form-data">
         <div class="upload-area" onclick="document.getElementById('file-input').click()">
             <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
-            <p>Нажмите или перетащите файл Excel (.xlsx, .xls)</p>
+            <p>Нажмите или перетащите файл Excel (.xlsx, .xls) для импорта</p>
             <input type="file" id="file-input" name="file" accept=".xlsx,.xls" style="display: none;" onchange="this.form.submit()">
         </div>
     </form>
@@ -100,17 +127,6 @@
         <p><strong>Важно:</strong> Заголовки колонок с датами должны быть в формате <strong>ГГГГ-ММ-ДД</strong> (например, 2026-04-01).</p>
         <p><strong>Важно:</strong> Имена сотрудников должны точно совпадать с логинами в системе.</p>
     </div>
-</div>
-
-<div class="card">
-    <div class="card-header">📌 Инструкция</div>
-    <ol>
-        <li>Создайте Excel-файл с первой колонкой "Сотрудник"</li>
-        <li>В остальных колонках укажите даты в формате <strong>ГГГГ-ММ-ДД</strong> в заголовке</li>
-        <li>В ячейках укажите тип смены (утро, день, вечер, выходной, отпуск)</li>
-        <li>Загрузите файл через форму выше</li>
-        <li>Система автоматически создаст или обновит смены</li>
-    </ol>
 </div>
 
 {% endblock %}
