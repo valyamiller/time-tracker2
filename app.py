@@ -911,9 +911,24 @@ def export_schedule():
         Shift.date <= end_date
     ).all()
     
+    work_entries = WorkEntry.query.filter(
+        WorkEntry.date >= start_date,
+        WorkEntry.date <= end_date
+    ).all()
+    
+    # Создаём словари для быстрого доступа
     shifts_dict = {}
     for shift in shifts:
         shifts_dict[(shift.user_id, shift.date)] = shift
+    
+    # Считаем часы для каждого пользователя
+    user_hours = {}
+    for user in users:
+        total_hours = 0
+        for entry in work_entries:
+            if entry.user_id == user.id:
+                total_hours += entry.hours_worked
+        user_hours[user.id] = round(total_hours, 1)
     
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -922,6 +937,8 @@ def export_schedule():
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="3b82f6", end_color="3b82f6", fill_type="solid")
     weekend_fill = PatternFill(start_color="ef4444", end_color="ef4444", fill_type="solid")
+    total_fill = PatternFill(start_color="10b981", end_color="10b981", fill_type="solid")
+    total_font = Font(bold=True, color="FFFFFF")
     thin_border = Border(
         left=Side(style='thin'),
         right=Side(style='thin'),
@@ -957,13 +974,22 @@ def export_schedule():
         current_date += timedelta(days=1)
         col += 1
     
-    # Заполняем данные
+    # Добавляем колонку для итогов
+    total_col = len(days_in_month) + 2
+    ws.cell(row=1, column=total_col, value="ИТОГО часов")
+    ws.cell(row=1, column=total_col).font = header_font
+    ws.cell(row=1, column=total_col).fill = header_fill
+    ws.cell(row=1, column=total_col).alignment = center_align
+    ws.cell(row=1, column=total_col).border = thin_border
+    
+    # Заполняем данные сотрудников
     row = 2
     for user in users:
         ws.cell(row=row, column=1, value=user.username)
         ws.cell(row=row, column=1).alignment = center_align
         ws.cell(row=row, column=1).border = thin_border
         
+        # Заполняем смены по дням
         for day_info in days_in_month:
             shift = shifts_dict.get((user.id, day_info['date']))
             col = day_info['col']
@@ -991,10 +1017,18 @@ def export_schedule():
             if day_info['is_weekend']:
                 ws.cell(row=row, column=col).fill = weekend_fill
         
+        # Добавляем итоговые часы для сотрудника
+        total_hours = user_hours.get(user.id, 0)
+        ws.cell(row=row, column=total_col, value=total_hours)
+        ws.cell(row=row, column=total_col).font = Font(bold=True)
+        ws.cell(row=row, column=total_col).fill = total_fill
+        ws.cell(row=row, column=total_col).alignment = center_align
+        ws.cell(row=row, column=total_col).border = thin_border
+        
         row += 1
     
-    # Автоматическая ширина колонок (используем get_column_letter)
-    for col_num in range(1, len(days_in_month) + 2):
+    # Автоматическая ширина колонок
+    for col_num in range(1, total_col + 1):
         col_letter = get_column_letter(col_num)
         ws.column_dimensions[col_letter].width = 12
     
