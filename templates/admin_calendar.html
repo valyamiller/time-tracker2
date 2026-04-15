@@ -155,7 +155,7 @@
                 {% for day in days %}
                 {% set shift = shifts_dict.get((user.id, day.date)) %}
                 {% set vacation = vacations_dict.get((user.id, day.date)) %}
-                <td class="{% if day.is_weekend %}weekend{% endif %}">
+                <td class="{% if day.is_weekend %}weekend{% endif %}" data-date="{{ day.date.isoformat() }}">
                     <div class="calendar-day">{{ day.date.day }}</div>
                     
                     {% if vacation %}
@@ -223,5 +223,15 @@
     <div class="legend-item"><span class="shift-off" style="display: inline-block; padding: 0.2rem 0.5rem;">🚫</span> Выходной</div>
     <div class="legend-item"><span class="shift-vacation" style="display: inline-block; padding: 0.2rem 0.5rem;">🏖️</span> Отпуск</div>
 </div>
+<script>
+    // Прокрутка к сохранённой дате после обновления
+    if (window.location.hash) {
+        var hash = window.location.hash.substring(1);
+        var target = document.querySelector('td[data-date="' + hash + '"]');
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+</script>
 
 {% endblock %}
