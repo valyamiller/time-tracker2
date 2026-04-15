@@ -108,7 +108,7 @@ def work_log():
         db.session.commit()
         flash('Рабочий день успешно добавлен!', 'success')
         return redirect(url_for('work_log'))
-        return render_template('import_schedule.html', now=date.today())
+      
     
     entries = WorkEntry.query.filter_by(user_id=current_user.id).order_by(WorkEntry.date.desc()).all()
     return render_template('work_log.html', entries=entries)
@@ -468,7 +468,7 @@ def import_schedule():
             flash(f'Ошибка при импорте: {str(e)}', 'error')
             return redirect(url_for('import_schedule'))
     
-    return render_template('import_schedule.html')
+    return render_template('import_schedule.html', now=date.today())
 
 @app.route('/admin/export_schedule')
 @login_required
