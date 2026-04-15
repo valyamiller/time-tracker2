@@ -748,4 +748,4 @@ if __name__ == '__main__':
     print("Access at: http://localhost:5001")
     print("=" * 50 + "\n")
 if __name__ == '__main__':
-    app.run(debug=False, host='127.0.0.1', port=8080)
+    app.run(debug=False, host='0.0.0.0', port=8080)
