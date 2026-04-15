@@ -1,20 +1,21 @@
-# Используем официальный образ Python 3.12
 FROM python:3.12-slim
 
-# Устанавливаем рабочую директорию внутри контейнера
 WORKDIR /app
 
-# Копируем файл с зависимостями
+# Создаем виртуальное окружение
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Обновляем pip и устанавливаем зависимости
 COPY requirements.txt .
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
-# Устанавливаем зависимости
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Копируем весь код приложения
+# Копируем весь код
 COPY . .
 
-# Открываем порт (порт вашего приложения)
+# Открываем порт
 EXPOSE 8080
 
-# КОМАНДА ЗАПУСКА (ЭТО САМОЕ ВАЖНОЕ!)
+# Запускаем приложение
 CMD ["python", "app.py"]
