@@ -233,5 +233,31 @@
         }
     }
 </script>
+<script>
+    // Сохраняем позицию прокрутки перед отправкой формы
+    document.querySelectorAll('form').forEach(function(form) {
+        form.addEventListener('submit', function() {
+            var scrollPos = window.scrollY;
+            var hash = window.location.hash;
+            // Сохраняем позицию в sessionStorage
+            sessionStorage.setItem('scrollPos', scrollPos);
+            sessionStorage.setItem('scrollHash', hash);
+        });
+    });
+    
+    // Восстанавливаем позицию после загрузки страницы
+    window.addEventListener('load', function() {
+        var scrollPos = sessionStorage.getItem('scrollPos');
+        if (scrollPos !== null) {
+            window.scrollTo(0, parseInt(scrollPos));
+            sessionStorage.removeItem('scrollPos');
+        }
+        var hash = sessionStorage.getItem('scrollHash');
+        if (hash) {
+            window.location.hash = hash;
+            sessionStorage.removeItem('scrollHash');
+        }
+    });
+</script>
 
 {% endblock %}
