@@ -14,10 +14,8 @@ app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
 # Настройка базы данных: PostgreSQL на сервере, SQLite для локальной разработки
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
-    # Используем PostgreSQL на сервере Timeweb Cloud
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL + '?sslmode=require'
 else:
-    # Используем SQLite локально (для тестирования)
     basedir = os.path.abspath(os.path.dirname(__file__))
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'database.db')
 
@@ -216,103 +214,108 @@ def admin_calendar():
                          next_year=next_year,
                          next_month=next_month)
 
-@app.route('/admin/add_shift', methods=['POST'])
+@app.route('/admin/add_shift_ajax', methods=['POST'])
 @login_required
 @admin_required
-def add_shift():
-    user_id = request.form.get('user_id', type=int)
-    date_str = request.form.get('date')
-    shift_type = request.form.get('shift_type')
-    start_time = request.form.get('start_time', '09:00')
-    end_time = request.form.get('end_time', '18:00')
-    notes = request.form.get('notes', '')
-    
-    shift_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-    
-    # Расчет часов
-    start_hour = int(start_time.split(':')[0])
-    start_minute = int(start_time.split(':')[1])
-    end_hour = int(end_time.split(':')[0])
-    end_minute = int(end_time.split(':')[1])
-    
-    if end_hour < start_hour or (end_hour == start_hour and end_minute < start_minute):
-        hours_worked = (24 - start_hour - start_minute/60) + end_hour + end_minute/60
-    else:
-        hours_worked = (end_hour - start_hour) + (end_minute - start_minute)/60
-    
-    # Обработка типов смен
-    if shift_type == 'vacation' or shift_type == 'off':
-        hours_worked = 0
-    elif hours_worked > 4:
-        hours_worked = hours_worked - 1
-    
-    hours_worked = round(hours_worked, 1)
-    
-    # Сохраняем смену
-    existing_shift = Shift.query.filter_by(user_id=user_id, date=shift_date).first()
-    
-    if existing_shift:
-        existing_shift.shift_type = shift_type
-        existing_shift.start_time = start_time
-        existing_shift.end_time = end_time
-        existing_shift.notes = notes
-    else:
-        shift = Shift(
-            user_id=user_id,
-            date=shift_date,
-            shift_type=shift_type,
-            start_time=start_time,
-            end_time=end_time,
-            notes=notes
-        )
-        db.session.add(shift)
-    
-    # Сохраняем запись о часах
-    existing_work = WorkEntry.query.filter_by(user_id=user_id, date=shift_date).first()
-    
-    description = f"Смена: {shift_type}"
-    if notes:
-        description += f" - {notes}"
-    
-    if existing_work:
-        existing_work.hours_worked = hours_worked
-        existing_work.description = description
-    else:
-        work_entry = WorkEntry(
-            user_id=user_id,
-            date=shift_date,
-            hours_worked=hours_worked,
-            description=description
-        )
-        db.session.add(work_entry)
-    
+def add_shift_ajax():
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        date_str = data.get('date')
+        shift_type = data.get('shift_type')
+        start_time = data.get('start_time', '09:00')
+        end_time = data.get('end_time', '18:00')
+        
+        shift_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # Расчет часов
+        start_hour = int(start_time.split(':')[0])
+        start_minute = int(start_time.split(':')[1])
+        end_hour = int(end_time.split(':')[0])
+        end_minute = int(end_time.split(':')[1])
+        
+        if end_hour < start_hour or (end_hour == start_hour and end_minute < start_minute):
+            hours_worked = (24 - start_hour - start_minute/60) + end_hour + end_minute/60
+        else:
+            hours_worked = (end_hour - start_hour) + (end_minute - start_minute)/60
+        
+        if shift_type == 'vacation' or shift_type == 'off':
+            hours_worked = 0
+        elif hours_worked > 4:
+            hours_worked = hours_worked - 1
+        
+        hours_worked = round(hours_worked, 1)
+        
+        # Сохраняем смену
+        existing_shift = Shift.query.filter_by(user_id=user_id, date=shift_date).first()
+        
+        if existing_shift:
+            existing_shift.shift_type = shift_type
+            existing_shift.start_time = start_time
+            existing_shift.end_time = end_time
+        else:
+            shift = Shift(
+                user_id=user_id,
+                date=shift_date,
+                shift_type=shift_type,
+                start_time=start_time,
+                end_time=end_time
+            )
+            db.session.add(shift)
+        
+        # Сохраняем запись о часах
+        existing_work = WorkEntry.query.filter_by(user_id=user_id, date=shift_date).first()
+        
+        description = f"Смена: {shift_type} {start_time}-{end_time}"
+        
+        if existing_work:
+            existing_work.hours_worked = hours_worked
+            existing_work.description = description
+        else:
+            work_entry = WorkEntry(
+                user_id=user_id,
+                date=shift_date,
+                hours_worked=hours_worked,
+                description=description
+            )
+            db.session.add(work_entry)
+        
         db.session.commit()
-    flash('Смена сохранена', 'success')
-    
-    # Получаем дату для якоря
-    anchor_date = request.form.get('anchor_date')
-    if anchor_date:
-        # Используем anchor_date, а не date_str
-        return redirect(url_for('admin_calendar', year=shift_date.year, month=shift_date.month, _anchor=anchor_date))
-    return redirect(url_for('admin_calendar', year=shift_date.year, month=shift_date.month))
+        
+        return jsonify({'success': True, 'message': 'Смена добавлена'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
 
-@app.route('/admin/delete_shift/<int:shift_id>')
+@app.route('/admin/delete_shift_ajax', methods=['POST'])
 @login_required
 @admin_required
-def delete_shift(shift_id):
-    shift = Shift.query.get_or_404(shift_id)
-    shift_date = shift.date
-    user_id = shift.user_id
-    
-    work_entry = WorkEntry.query.filter_by(user_id=user_id, date=shift_date).first()
-    if work_entry:
-        db.session.delete(work_entry)
-    
-    db.session.delete(shift)
-    db.session.commit()
-    
-    flash('Смена и часы удалены', 'success')
-    return redirect(url_for('admin_calendar', year=shift_date.year, month=shift_date.month))
+def delete_shift_ajax():
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        date_str = data.get('date')
+        
+        shift_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # Находим и удаляем смену
+        shift = Shift.query.filter_by(user_id=user_id, date=shift_date).first()
+        if shift:
+            db.session.delete(shift)
+        
+        # Удаляем запись о часах
+        work_entry = WorkEntry.query.filter_by(user_id=user_id, date=shift_date).first()
+        if work_entry:
+            db.session.delete(work_entry)
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Смена удалена'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/admin')
 @login_required
@@ -660,117 +663,6 @@ def admin_save_hours():
     db.session.commit()
     flash(f'Добавлено {hours} часов пользователю', 'success')
     return redirect(url_for('admin'))
-
-@app.route('/admin/add_shift_ajax', methods=['POST'])
-@login_required
-@admin_required
-def add_shift_ajax():
-    try:
-        data = request.get_json()
-        user_id = data.get('user_id')
-        date_str = data.get('date')
-        shift_type = data.get('shift_type')
-        
-        # Устанавливаем время по умолчанию для типа смены
-        if shift_type == 'morning':
-            start_time = '09:00'
-            end_time = '18:00'
-        elif shift_type == 'day':
-            start_time = '12:00'
-            end_time = '21:00'
-        elif shift_type == 'night':
-            start_time = '21:00'
-            end_time = '06:00'
-        elif shift_type == 'off':
-            start_time = '00:00'
-            end_time = '00:00'
-        elif shift_type == 'vacation':
-            start_time = '00:00'
-            end_time = '00:00'
-        else:
-            start_time = '09:00'
-            end_time = '18:00'
-        
-        shift_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        
-        # Расчет часов
-        start_hour = int(start_time.split(':')[0])
-        end_hour = int(end_time.split(':')[0])
-        
-        if shift_type == 'vacation' or shift_type == 'off':
-            hours_worked = 0
-        else:
-            hours_worked = end_hour - start_hour
-            if hours_worked > 4:
-                hours_worked = hours_worked - 1
-        
-        # Сохраняем смену
-        existing_shift = Shift.query.filter_by(user_id=user_id, date=shift_date).first()
-        
-        if existing_shift:
-            existing_shift.shift_type = shift_type
-            existing_shift.start_time = start_time
-            existing_shift.end_time = end_time
-        else:
-            shift = Shift(
-                user_id=user_id,
-                date=shift_date,
-                shift_type=shift_type,
-                start_time=start_time,
-                end_time=end_time
-            )
-            db.session.add(shift)
-        
-        # Сохраняем запись о часах
-        existing_work = WorkEntry.query.filter_by(user_id=user_id, date=shift_date).first()
-        
-        if existing_work:
-            existing_work.hours_worked = hours_worked
-        else:
-            work_entry = WorkEntry(
-                user_id=user_id,
-                date=shift_date,
-                hours_worked=hours_worked,
-                description=f"Смена: {shift_type}"
-            )
-            db.session.add(work_entry)
-        
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': 'Смена добавлена'})
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/admin/delete_shift_ajax', methods=['POST'])
-@login_required
-@admin_required
-def delete_shift_ajax():
-    try:
-        data = request.get_json()
-        user_id = data.get('user_id')
-        date_str = data.get('date')
-        
-        shift_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        
-        # Находим и удаляем смену
-        shift = Shift.query.filter_by(user_id=user_id, date=shift_date).first()
-        if shift:
-            db.session.delete(shift)
-        
-        # Удаляем запись о часах
-        work_entry = WorkEntry.query.filter_by(user_id=user_id, date=shift_date).first()
-        if work_entry:
-            db.session.delete(work_entry)
-        
-        db.session.commit()
-        
-        return jsonify({'success': True, 'message': 'Смена удалена'})
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)})
 
 # Админ: добавить часы себе
 @app.route('/admin/add_my_hours', methods=['GET', 'POST'])
