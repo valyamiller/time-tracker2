@@ -18,6 +18,7 @@
                     <a href="{{ url_for('admin_overtime_requests') }}">⏱️ Запросы часов</a>
                     <a href="{{ url_for('admin_add_my_hours') }}">➕ Добавить часы</a>
                     <a href="{{ url_for('admin') }}">👥 Управление</a>
+                    <a href="{{ url_for('import_schedule') }}">📥 Импорт графика</a>
                 {% else %}
                     <a href="{{ url_for('dashboard') }}">📊 Дашборд</a>
                     <a href="{{ url_for('my_shifts') }}">📅 Мои смены</a>

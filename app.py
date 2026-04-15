@@ -7,6 +7,8 @@ from utils import admin_required
 import calendar
 from sqlalchemy import func
 import os
+import openpyxl
+from io import BytesIO
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
@@ -304,6 +306,167 @@ def add_shift_ajax():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
+    
+    import openpyxl
+from io import BytesIO
+
+@app.route('/admin/import_schedule', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def import_schedule():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('Файл не выбран', 'error')
+            return redirect(url_for('import_schedule'))
+        
+        file = request.files['file']
+        if file.filename == '':
+            flash('Файл не выбран', 'error')
+            return redirect(url_for('import_schedule'))
+        
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            flash('Поддерживаются только файлы Excel (.xlsx, .xls)', 'error')
+            return redirect(url_for('import_schedule'))
+        
+        try:
+            # Читаем Excel файл
+            workbook = openpyxl.load_workbook(BytesIO(file.read()))
+            sheet = workbook.active
+            
+            # Получаем список пользователей
+            users = {user.username: user for user in User.query.filter(User.username != 'admin').all()}
+            
+            # Определяем заголовки (первая строка)
+            headers = []
+            for col in range(1, sheet.max_column + 1):
+                cell_value = sheet.cell(row=1, column=col).value
+                if cell_value:
+                    headers.append(str(cell_value).strip())
+            
+            # Ищем колонку с сотрудниками (должна быть первая)
+            user_col = 1
+            
+            # Определяем колонки с датами (остальные)
+            date_columns = []
+            for col_idx, header in enumerate(headers, start=1):
+                if col_idx != user_col:
+                    try:
+                        # Пробуем преобразовать заголовок в дату
+                        date_col = datetime.strptime(str(header), '%Y-%m-%d').date()
+                        date_columns.append((col_idx, date_col))
+                    except ValueError:
+                        pass
+            
+            if not date_columns:
+                flash('Не найдены колонки с датами. Используйте формат ГГГГ-ММ-ДД в заголовках', 'error')
+                return redirect(url_for('import_schedule'))
+            
+            # Обрабатываем строки с сотрудниками
+            created_count = 0
+            updated_count = 0
+            errors = []
+            
+            for row in range(2, sheet.max_row + 1):
+                username = sheet.cell(row=row, column=user_col).value
+                if not username:
+                    continue
+                
+                username = str(username).strip()
+                if username not in users:
+                    errors.append(f'Сотрудник "{username}" не найден в системе')
+                    continue
+                
+                user = users[username]
+                
+                # Обрабатываем каждую дату
+                for col_idx, shift_date in date_columns:
+                    shift_value = sheet.cell(row=row, column=col_idx).value
+                    if not shift_value:
+                        continue
+                    
+                    shift_str = str(shift_value).strip().lower()
+                    
+                    # Определяем тип смены
+                    if shift_str in ['утро', 'morning', 'м', 'am']:
+                        shift_type = 'morning'
+                        start_time = '09:00'
+                        end_time = '18:00'
+                    elif shift_str in ['день', 'day', 'д', 'd']:
+                        shift_type = 'day'
+                        start_time = '10:00'
+                        end_time = '19:00'
+                    elif shift_str in ['вечер', 'evening', 'night', 'в', 'н', 'pm']:
+                        shift_type = 'night'
+                        start_time = '16:00'
+                        end_time = '23:00'
+                    elif shift_str in ['выходной', 'off', 'вых', 'o']:
+                        shift_type = 'off'
+                        start_time = '00:00'
+                        end_time = '00:00'
+                    elif shift_str in ['отпуск', 'vacation', 'отп', 'v']:
+                        shift_type = 'vacation'
+                        start_time = '00:00'
+                        end_time = '00:00'
+                    else:
+                        continue
+                    
+                    # Создаём или обновляем смену
+                    existing_shift = Shift.query.filter_by(user_id=user.id, date=shift_date).first()
+                    
+                    if existing_shift:
+                        existing_shift.shift_type = shift_type
+                        existing_shift.start_time = start_time
+                        existing_shift.end_time = end_time
+                        updated_count += 1
+                    else:
+                        shift = Shift(
+                            user_id=user.id,
+                            date=shift_date,
+                            shift_type=shift_type,
+                            start_time=start_time,
+                            end_time=end_time
+                        )
+                        db.session.add(shift)
+                        created_count += 1
+                    
+                    # Рассчитываем часы
+                    if shift_type in ['off', 'vacation']:
+                        hours_worked = 0
+                    else:
+                        start_hour = int(start_time.split(':')[0])
+                        end_hour = int(end_time.split(':')[0])
+                        hours_worked = end_hour - start_hour
+                        if hours_worked > 4:
+                            hours_worked = hours_worked - 1
+                    
+                    # Обновляем или создаём запись о часах
+                    existing_work = WorkEntry.query.filter_by(user_id=user.id, date=shift_date).first()
+                    
+                    if existing_work:
+                        existing_work.hours_worked = hours_worked
+                        existing_work.description = f"Импорт: {shift_type} {start_time}-{end_time}"
+                    else:
+                        work_entry = WorkEntry(
+                            user_id=user.id,
+                            date=shift_date,
+                            hours_worked=hours_worked,
+                            description=f"Импорт: {shift_type} {start_time}-{end_time}"
+                        )
+                        db.session.add(work_entry)
+            
+            db.session.commit()
+            
+            flash(f'Импорт завершён! Создано: {created_count}, Обновлено: {updated_count}', 'success')
+            if errors:
+                flash(f'Ошибки: {", ".join(errors[:5])}', 'warning')
+            
+            return redirect(url_for('admin_calendar'))
+            
+        except Exception as e:
+            flash(f'Ошибка при импорте: {str(e)}', 'error')
+            return redirect(url_for('import_schedule'))
+    
+    return render_template('import_schedule.html')
     
 @app.route('/admin/delete_shift_ajax', methods=['POST'])
 @login_required

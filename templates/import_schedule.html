@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .upload-area {
+        border: 2px dashed var(--border-color);
+        border-radius: 12px;
+        padding: 3rem;
+        text-align: center;
+        background: var(--bg-tertiary);
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .upload-area:hover {
+        border-color: var(--accent-primary);
+        background: rgba(59, 130, 246, 0.1);
+    }
+    
+    .example-table {
+        margin-top: 2rem;
+        overflow-x: auto;
+    }
+    
+    .example-table table {
+        width: 100%;
+        font-size: 0.8rem;
+    }
+    
+    .example-table th, .example-table td {
+        padding: 0.5rem;
+        text-align: center;
+        border: 1px solid var(--border-color);
+    }
+    
+    .example-table th {
+        background: var(--bg-tertiary);
+    }
+</style>
+
+<h1 style="margin: 2rem 0;">📥 Импорт графика из Excel</h1>
+
+<div class="card">
+    <div class="card-header">Загрузить файл</div>
+    
+    <form method="POST" enctype="multipart/form-data">
+        <div class="upload-area" onclick="document.getElementById('file-input').click()">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+            <p>Нажмите или перетащите файл Excel (.xlsx, .xls)</p>
+            <input type="file" id="file-input" name="file" accept=".xlsx,.xls" style="display: none;" onchange="this.form.submit()">
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">📋 Пример формата файла</div>
+    
+    <div class="example-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Сотрудник</th>
+                    <th>2026-04-01</th>
+                    <th>2026-04-02</th>
+                    <th>2026-04-03</th>
+                    <th>2026-04-04</th>
+                    <th>2026-04-05</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>ivanov</td>
+                    <td>утро</td>
+                    <td>день</td>
+                    <td>вечер</td>
+                    <td>выходной</td>
+                    <td>отпуск</td>
+                </tr>
+                <tr>
+                    <td>petrov</td>
+                    <td>день</td>
+                    <td>вечер</td>
+                    <td>утро</td>
+                    <td>утро</td>
+                    <td>выходной</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div style="margin-top: 1rem;">
+        <p><strong>Доступные значения:</strong></p>
+        <ul>
+            <li><strong>Утро</strong> — утро, morning, м, am (09:00-18:00)</li>
+            <li><strong>День</strong> — день, day, д, d (10:00-19:00)</li>
+            <li><strong>Вечер</strong> — вечер, evening, night, в, н, pm (16:00-23:00)</li>
+            <li><strong>Выходной</strong> — выходной, off, вых, o</li>
+            <li><strong>Отпуск</strong> — отпуск, vacation, отп, v</li>
+        </ul>
+        <p><strong>Важно:</strong> Заголовки колонок с датами должны быть в формате <strong>ГГГГ-ММ-ДД</strong> (например, 2026-04-01).</p>
+        <p><strong>Важно:</strong> Имена сотрудников должны точно совпадать с логинами в системе.</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">📌 Инструкция</div>
+    <ol>
+        <li>Создайте Excel-файл с первой колонкой "Сотрудник"</li>
+        <li>В остальных колонках укажите даты в формате <strong>ГГГГ-ММ-ДД</strong> в заголовке</li>
+        <li>В ячейках укажите тип смены (утро, день, вечер, выходной, отпуск)</li>
+        <li>Загрузите файл через форму выше</li>
+        <li>Система автоматически создаст или обновит смены</li>
+    </ol>
+</div>
+
+{% endblock %}
