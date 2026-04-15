@@ -2,17 +2,11 @@
 
 {% block content %}
 <style>
-    .calendar-wrapper {
-        display: flex;
-        justify-content: center;
-        width: 100%;
-        overflow-x: auto;
-    }
-    
     .calendar-container {
         background: var(--bg-secondary);
         border-radius: 12px;
         padding: 1rem;
+        overflow-x: auto;
     }
     
     .calendar-header {
@@ -49,15 +43,13 @@
         padding: 0.5rem;
         text-align: center;
         border: 1px solid var(--border-color);
-        position: sticky;
-        top: 0;
     }
     
     .calendar-table td {
         border: 1px solid var(--border-color);
         padding: 0.5rem;
         vertical-align: top;
-        min-width: 90px;
+        min-width: 100px;
     }
     
     .user-cell {
@@ -146,78 +138,90 @@
     </div>
 </div>
 
-<div class="calendar-wrapper">
-    <div class="calendar-container">
-        <table class="calendar-table">
-            <thead>
-                <tr>
-                    <th>Сотрудник</th>
-                    {% for day in days %}
-                    <th>{{ day.date.day }}<br><small>{{ ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][day.day_of_week] }}</small></th>
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in users %}
-                <tr>
-                    <td class="user-cell">{{ user.username }}</td>
-                    {% for day in days %}
-                    {% set shift = shifts_dict.get((user.id, day.date)) %}
-                    {% set vacation = vacations_dict.get((user.id, day.date)) %}
-                    <td class="{% if day.is_weekend %}weekend{% endif %}">
-                        <div class="calendar-day">{{ day.date.day }}</div>
-                        {% if vacation %}
-                        <div class="vacation-badge">🏖️ Отпуск</div>
-                        {% endif %}
-                        {% if shift %}
-                            {% if shift.shift_type == 'vacation' %}
-                            <div class="shift-vacation">
-                                <strong>🏖️ Отпуск</strong>
-                                {% if shift.notes %}<br><small>{{ shift.notes[:15] }}</small>{% endif %}
-                                <br><a href="{{ url_for('delete_shift', shift_id=shift.id) }}" class="btn-small btn-danger" onclick="return confirm('Удалить отпуск?')">🗑️ Удалить</a>
-                            </div>
-                            {% elif shift.shift_type == 'off' %}
-                            <div class="shift-off">
-                                <strong>🚫 Выходной</strong>
-                                {% if shift.notes %}<br><small>{{ shift.notes[:15] }}</small>{% endif %}
-                                <br><a href="{{ url_for('delete_shift', shift_id=shift.id) }}" class="btn-small btn-danger" onclick="return confirm('Удалить выходной?')">🗑️ Удалить</a>
-                            </div>
-                            {% else %}
-                            <div class="shift-{{ shift.shift_type }}">
-                                <strong>{% if shift.shift_type == 'morning' %}🌅 Утро{% elif shift.shift_type == 'day' %}☀️ День{% elif shift.shift_type == 'night' %}🌙 Вечер{% endif %}</strong>
-                                <br>{{ shift.start_time }}-{{ shift.end_time }}
-                                <br><a href="{{ url_for('delete_shift', shift_id=shift.id) }}" class="btn-small btn-danger" onclick="return confirm('Удалить смену?')">🗑️ Удалить</a>
-                            </div>
-                            {% endif %}
-                        {% else %}
-                        <form method="POST" action="{{ url_for('add_shift') }}" style="margin-top: 0.5rem;">
-                            <input type="hidden" name="user_id" value="{{ user.id }}">
-                            <input type="hidden" name="date" value="{{ day.date.isoformat() }}">
-                            <select name="shift_type" style="width: 100%; margin-bottom: 0.25rem;">
-                                <option value="morning">🌅 Утро</option>
-                                <option value="day">☀️ День</option>
-                                <option value="night">🌙 Вечер</option>
-                                <option value="off">🚫 Выходной</option>
-                                <option value="vacation">🏖️ Отпуск</option>
-                            </select>
-                            <button type="submit" style="width: 100%;">+ Добавить</button>
-                        </form>
-                        {% endif %}
-                    </td>
-                    {% endfor %}
-                </tr>
+<div class="calendar-container">
+    <table class="calendar-table">
+        <thead>
+            <tr>
+                <th>Сотрудник</th>
+                {% for day in days %}
+                <th>{{ day.date.day }}<br><small>{{ ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][day.day_of_week] }}</small></th>
                 {% endfor %}
-            </tbody>
-        </table>
-    </div>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td class="user-cell">{{ user.username }}</td>
+                {% for day in days %}
+                {% set shift = shifts_dict.get((user.id, day.date)) %}
+                {% set vacation = vacations_dict.get((user.id, day.date)) %}
+                <td class="{% if day.is_weekend %}weekend{% endif %}">
+                    <div class="calendar-day">{{ day.date.day }}</div>
+                    
+                    {% if vacation %}
+                    <div class="vacation-badge">🏖️ Отпуск</div>
+                    {% endif %}
+                    
+                    {% if shift %}
+                        {% if shift.shift_type == 'vacation' %}
+                        <div class="shift-vacation">
+                            <strong>🏖️ Отпуск</strong>
+                            {% if shift.notes %}
+                            <br><small>{{ shift.notes[:15] }}</small>
+                            {% endif %}
+                            <br>
+                            <a href="{{ url_for('delete_shift', shift_id=shift.id) }}" class="btn-small btn-danger" onclick="return confirm('Удалить отпуск?')">🗑️</a>
+                        </div>
+                        {% elif shift.shift_type == 'off' %}
+                        <div class="shift-off">
+                            <strong>🚫 Выходной</strong>
+                            {% if shift.notes %}
+                            <br><small>{{ shift.notes[:15] }}</small>
+                            {% endif %}
+                            <br>
+                            <a href="{{ url_for('delete_shift', shift_id=shift.id) }}" class="btn-small btn-danger" onclick="return confirm('Удалить выходной?')">🗑️</a>
+                        </div>
+                        {% else %}
+                        <div class="shift-{{ shift.shift_type }}">
+                            <strong>
+                                {% if shift.shift_type == 'morning' %}🌅 Утро
+                                {% elif shift.shift_type == 'day' %}☀️ День
+                                {% elif shift.shift_type == 'night' %}🌙 Вечер
+                                {% endif %}
+                            </strong>
+                            <br>{{ shift.start_time }}-{{ shift.end_time }}
+                            <br>
+                            <a href="{{ url_for('delete_shift', shift_id=shift.id) }}" class="btn-small btn-danger" onclick="return confirm('Удалить смену?')">🗑️</a>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                    <form method="POST" action="{{ url_for('add_shift') }}" style="margin-top: 0.5rem;">
+                        <input type="hidden" name="user_id" value="{{ user.id }}">
+                        <input type="hidden" name="date" value="{{ day.date.isoformat() }}">
+                        <select name="shift_type" style="width: 100%; margin-bottom: 0.25rem;">
+                            <option value="morning">🌅 Утро</option>
+                            <option value="day">☀️ День</option>
+                            <option value="night">🌙 Вечер</option>
+                            <option value="off">🚫 Выходной</option>
+                            <option value="vacation">🏖️ Отпуск</option>
+                        </select>
+                        <button type="submit" style="width: 100%;">+</button>
+                    </form>
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 
 <div class="legend">
-    <div class="legend-item"><span style="background: rgba(59, 130, 246, 0.3); padding: 0.2rem 0.5rem;">🌅</span> Утро</div>
-    <div class="legend-item"><span style="background: rgba(16, 185, 129, 0.3); padding: 0.2rem 0.5rem;">☀️</span> День</div>
-    <div class="legend-item"><span style="background: rgba(139, 92, 246, 0.3); padding: 0.2rem 0.5rem;">🌙</span> Вечер</div>
-    <div class="legend-item"><span style="background: rgba(239, 68, 68, 0.3); padding: 0.2rem 0.5rem;">🚫</span> Выходной</div>
-    <div class="legend-item"><span style="background: rgba(245, 158, 11, 0.3); padding: 0.2rem 0.5rem;">🏖️</span> Отпуск</div>
+    <div class="legend-item"><span class="shift-morning" style="display: inline-block; padding: 0.2rem 0.5rem;">🌅</span> Утро</div>
+    <div class="legend-item"><span class="shift-day" style="display: inline-block; padding: 0.2rem 0.5rem;">☀️</span> День</div>
+    <div class="legend-item"><span class="shift-night" style="display: inline-block; padding: 0.2rem 0.5rem;">🌙</span> Вечер</div>
+    <div class="legend-item"><span class="shift-off" style="display: inline-block; padding: 0.2rem 0.5rem;">🚫</span> Выходной</div>
+    <div class="legend-item"><span class="shift-vacation" style="display: inline-block; padding: 0.2rem 0.5rem;">🏖️</span> Отпуск</div>
 </div>
 
 {% endblock %}
