@@ -224,9 +224,24 @@ def add_shift_ajax():
         date_str = data.get('date')
         shift_type = data.get('shift_type')
         
-        # БЕРЁМ ВРЕМЯ ИЗ ЗАПРОСА (индивидуальное), а не устанавливаем принудительно
-        start_time = data.get('start_time', '09:00')
-        end_time = data.get('end_time', '18:00')
+        # Получаем время из запроса
+        start_time = data.get('start_time')
+        end_time = data.get('end_time')
+        
+        # Если время НЕ передано или переданы пустые значения - подставляем стандартное
+        if not start_time or not end_time:
+            if shift_type == 'morning':
+                start_time = '09:00'
+                end_time = '18:00'
+            elif shift_type == 'day':
+                start_time = '10:00'
+                end_time = '19:00'
+            elif shift_type == 'night':
+                start_time = '16:00'
+                end_time = '23:00'
+            else:
+                start_time = '09:00'
+                end_time = '18:00'
         
         shift_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         
@@ -248,7 +263,7 @@ def add_shift_ajax():
         
         hours_worked = round(hours_worked, 1)
         
-        # Сохраняем смену С ИНДИВИДУАЛЬНЫМ ВРЕМЕНЕМ
+        # Сохраняем смену
         existing_shift = Shift.query.filter_by(user_id=user_id, date=shift_date).first()
         
         if existing_shift:
@@ -284,7 +299,6 @@ def add_shift_ajax():
         
         db.session.commit()
         
-        # Возвращаем сохранённое время для обновления ячейки
         return jsonify({'success': True, 'message': 'Смена добавлена', 'start_time': start_time, 'end_time': end_time})
         
     except Exception as e:

@@ -354,9 +354,18 @@ function handleAddShift(event) {
     var date = container.dataset.date;
     var select = container.querySelector('.shift-type-select');
     var shiftType = select.value;
-    var startTime = container.querySelector('.shift-start-time').value;
-    var endTime = container.querySelector('.shift-end-time').value;
-    addShift(userId, date, shiftType, startTime, endTime);
+    var startTimeInput = container.querySelector('.shift-start-time');
+    var endTimeInput = container.querySelector('.shift-end-time');
+    var startTime = startTimeInput ? startTimeInput.value : null;
+    var endTime = endTimeInput ? endTimeInput.value : null;
+    
+    // Если поля времени есть и они не пустые - передаём их
+    if (startTime && endTime) {
+        addShift(userId, date, shiftType, startTime, endTime);
+    } else {
+        // Если полей времени нет - передаём пустые значения, сервер подставит стандартные
+        addShift(userId, date, shiftType, null, null);
+    }
 }
 
 // Обработчик удаления смены
