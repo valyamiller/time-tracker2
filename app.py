@@ -526,23 +526,93 @@ def reject_overtime(req_id):
 def delete_shift(shift_id):
     shift = Shift.query.get_or_404(shift_id)
     shift_date = shift.date
+    user_id = shift.user_id
+    
+    # Удаляем запись о рабочих часах
+    work_entry = WorkEntry.query.filter_by(user_id=user_id, date=shift_date).first()
+    if work_entry:
+        db.session.delete(work_entry)
+    
+    # Удаляем смену
     db.session.delete(shift)
     db.session.commit()
-    flash('Смена удалена', 'success')
+    
+    flash('Смена и часы удалены', 'success')
     return redirect(url_for('admin_calendar', year=shift_date.year, month=shift_date.month))
 
-@app.route('/admin')
+@app.route('/admin/add_shift', methods=['POST'])
 @login_required
 @admin_required
-def admin():
-    users = User.query.all()
-    pending_vacations = Vacation.query.filter_by(status='pending').all()
-    work_entries = WorkEntry.query.filter_by(status='active').all()
+def add_shift():
+    user_id = request.form.get('user_id', type=int)
+    date_str = request.form.get('date')
+    shift_type = request.form.get('shift_type')
+    start_time = request.form.get('start_time', '09:00')
+    end_time = request.form.get('end_time', '18:00')
+    notes = request.form.get('notes', '')
     
-    return render_template('admin.html', 
-                         users=users, 
-                         pending_vacations=pending_vacations,
-                         work_entries=work_entries)
+    shift_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    
+    # Расчет часов
+    start_hour = int(start_time.split(':')[0])
+    start_minute = int(start_time.split(':')[1])
+    end_hour = int(end_time.split(':')[0])
+    end_minute = int(end_time.split(':')[1])
+    
+    if end_hour < start_hour or (end_hour == start_hour and end_minute < start_minute):
+        hours_worked = (24 - start_hour - start_minute/60) + end_hour + end_minute/60
+    else:
+        hours_worked = (end_hour - start_hour) + (end_minute - start_minute)/60
+    
+    # ВАЖНО: обработка типов смен
+    if shift_type == 'vacation':
+        hours_worked = 0
+    elif shift_type == 'off':
+        hours_worked = 0
+    elif hours_worked > 4:
+        hours_worked = hours_worked - 1  # вычитаем обед
+    
+    hours_worked = round(hours_worked, 1)
+    
+    # Сохраняем смену
+    existing_shift = Shift.query.filter_by(user_id=user_id, date=shift_date).first()
+    
+    if existing_shift:
+        existing_shift.shift_type = shift_type
+        existing_shift.start_time = start_time
+        existing_shift.end_time = end_time
+        existing_shift.notes = notes
+    else:
+        shift = Shift(
+            user_id=user_id,
+            date=shift_date,
+            shift_type=shift_type,
+            start_time=start_time,
+            end_time=end_time,
+            notes=notes
+        )
+        db.session.add(shift)
+    
+    # Сохраняем или обновляем запись о часах
+    existing_work = WorkEntry.query.filter_by(user_id=user_id, date=shift_date).first()
+    
+    if existing_work:
+        existing_work.hours_worked = hours_worked
+        existing_work.description = f"Смена: {shift_type}"
+        if notes:
+            existing_work.description += f" - {notes}"
+    else:
+        work_entry = WorkEntry(
+            user_id=user_id,
+            date=shift_date,
+            hours_worked=hours_worked,
+            description=f"Смена: {shift_type}" + (f" - {notes}" if notes else "")
+        )
+        db.session.add(work_entry)
+    
+    db.session.commit()
+    flash('Смена сохранена', 'success')
+    return redirect(url_for('admin_calendar', year=shift_date.year, month=shift_date.month))
 
 @app.route('/admin/add_user', methods=['POST'])
 @login_required
