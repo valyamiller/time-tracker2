@@ -9,6 +9,18 @@ from sqlalchemy import func
 import os
 import openpyxl
 from io import BytesIO
+from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool
+
+# Функция для проверки и восстановления соединения с БД
+def check_db_connection():
+    try:
+        db.session.execute('SELECT 1')
+    except Exception as e:
+        print(f"Database connection lost: {e}")
+        db.session.remove()
+        db.create_all()
+        print("Database connection restored")
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
@@ -17,6 +29,13 @@ app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL + '?sslmode=require'
+    # Настройки для поддержания соединения
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,   # Проверка соединения перед использованием
+        'pool_recycle': 300,     # Переподключение каждые 5 минут
+        'pool_size': 5,
+        'max_overflow': 10
+    }
 else:
     basedir = os.path.abspath(os.path.dirname(__file__))
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'database.db')
@@ -33,6 +52,10 @@ init_auth_routes(app)
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+@app.before_request
+def before_request():
+    check_db_connection()
 
 @app.route('/')
 def index():
