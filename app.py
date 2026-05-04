@@ -1085,6 +1085,9 @@ def admin_holidays():
         Holiday.date <= end_date
     ).order_by(Holiday.date).all()
     
+    # Создаём список чисел дней месяца, которые являются праздниками
+    holidays_dates = [holiday.date.day for holiday in holidays]
+    
     prev_month = month - 1 if month > 1 else 12
     prev_year = year if month > 1 else year - 1
     next_month = month + 1 if month < 12 else 1
@@ -1095,6 +1098,7 @@ def admin_holidays():
     
     return render_template('admin_holidays.html',
                          holidays=holidays,
+                         holidays_dates=holidays_dates,
                          year=year,
                          month=month,
                          month_name=month_names[month-1],

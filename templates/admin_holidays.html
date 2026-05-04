@@ -69,17 +69,17 @@
         {% endif %}
         
         {# Дни месяца #}
-        {% set current = start_date %}
-        {% while current <= end_date %}
-            {% set holiday = holidays|selectattr("date", "equalto", current)|first %}
-            <div class="day-cell {% if holiday %}holiday-cell{% else %}normal-day{% endif %}">
-                {{ current.day }}
-                {% if holiday %}
+        {% set days_in_month = (end_date - start_date).days + 1 %}
+        {% for day_num in range(1, days_in_month + 1) %}
+            <div class="day-cell {% if day_num in holidays_dates %}holiday-cell{% else %}normal-day{% endif %}">
+                {{ day_num }}
+                {% if day_num in holidays_dates %}
                 <br><small>🎉</small>
                 {% endif %}
             </div>
-            {% set current = current + timedelta(days=1) %}
-        {% endwhile %}
+        {% endfor %}
+            </div>
+        {% endfor %}
     </div>
 </div>
 
