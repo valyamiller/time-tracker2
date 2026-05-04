@@ -84,3 +84,12 @@ class OvertimeRequest(db.Model):
     admin_comment = db.Column(db.String(500))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class Holiday(db.Model):
+    __tablename__ = 'holidays'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False, unique=True)
+    name = db.Column(db.String(100), nullable=False)
+    multiplier = db.Column(db.Float, default=2.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)

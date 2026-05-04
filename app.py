@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_login import LoginManager, login_required, current_user
 from datetime import datetime, timedelta, date
-from models import db, User, WorkEntry, Vacation, Shift, OvertimeRequest
+from models import db, User, WorkEntry, Vacation, Shift, OvertimeRequest, Holiday
 from auth import init_auth_routes
 from utils import admin_required
 import calendar
@@ -9,18 +9,6 @@ from sqlalchemy import func
 import os
 import openpyxl
 from io import BytesIO
-from sqlalchemy import create_engine
-from sqlalchemy.pool import NullPool
-
-# Функция для проверки и восстановления соединения с БД
-def check_db_connection():
-    try:
-        db.session.execute('SELECT 1')
-    except Exception as e:
-        print(f"Database connection lost: {e}")
-        db.session.remove()
-        db.create_all()
-        print("Database connection restored")
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'
@@ -31,8 +19,8 @@ if DATABASE_URL:
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL + '?sslmode=require'
     # Настройки для поддержания соединения
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'pool_pre_ping': True,   # Проверка соединения перед использованием
-        'pool_recycle': 300,     # Переподключение каждые 5 минут
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
         'pool_size': 5,
         'max_overflow': 10
     }
@@ -51,11 +39,23 @@ init_auth_routes(app)
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    try:
+        return User.query.get(int(user_id))
+    except Exception as e:
+        print(f"Error loading user: {e}")
+        db.session.remove()
+        return User.query.get(int(user_id))
 
+# Проверка соединения с БД перед каждым запросом
 @app.before_request
 def before_request():
-    check_db_connection()
+    try:
+        db.session.execute('SELECT 1')
+    except Exception as e:
+        print(f"Database connection lost: {e}")
+        db.session.remove()
+        db.create_all()
+        print("Database connection restored")
 
 @app.route('/')
 def index():
@@ -249,11 +249,9 @@ def add_shift_ajax():
         date_str = data.get('date')
         shift_type = data.get('shift_type')
         
-        # Получаем время из запроса
         start_time = data.get('start_time')
         end_time = data.get('end_time')
         
-        # Если время не передано или это стандартное значение - подставляем стандартное для типа смены
         if not start_time or not end_time or (start_time == '09:00' and end_time == '18:00'):
             if shift_type == 'morning':
                 start_time = '09:00'
@@ -270,7 +268,6 @@ def add_shift_ajax():
         
         shift_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         
-        # Расчет часов
         start_hour = int(start_time.split(':')[0])
         start_minute = int(start_time.split(':')[1])
         end_hour = int(end_time.split(':')[0])
@@ -286,9 +283,16 @@ def add_shift_ajax():
         elif hours_worked > 4:
             hours_worked = hours_worked - 1
         
+        # Проверка на праздничный день
+        holiday = Holiday.query.filter_by(date=shift_date).first()
+        if holiday and shift_type not in ['off', 'vacation']:
+            hours_worked = hours_worked * holiday.multiplier
+            description = f"Смена: {shift_type} {start_time}-{end_time} (праздник: {holiday.name} x{holiday.multiplier})"
+        else:
+            description = f"Смена: {shift_type} {start_time}-{end_time}"
+        
         hours_worked = round(hours_worked, 1)
         
-        # Сохраняем смену
         existing_shift = Shift.query.filter_by(user_id=user_id, date=shift_date).first()
         
         if existing_shift:
@@ -305,10 +309,7 @@ def add_shift_ajax():
             )
             db.session.add(shift)
         
-        # Сохраняем запись о часах
         existing_work = WorkEntry.query.filter_by(user_id=user_id, date=shift_date).first()
-        
-        description = f"Смена: {shift_type} {start_time}-{end_time}"
         
         if existing_work:
             existing_work.hours_worked = hours_worked
@@ -877,17 +878,27 @@ def import_schedule():
                         if hours_worked > 4:
                             hours_worked = hours_worked - 1
                     
+                    # Проверка на праздник
+                    holiday = Holiday.query.filter_by(date=shift_date).first()
+                    if holiday and shift_type not in ['off', 'vacation']:
+                        hours_worked = hours_worked * holiday.multiplier
+                    
                     existing_work = WorkEntry.query.filter_by(user_id=user.id, date=shift_date).first()
                     
                     if existing_work:
                         existing_work.hours_worked = hours_worked
                         existing_work.description = f"Импорт: {shift_type} {start_time}-{end_time}"
+                        if holiday:
+                            existing_work.description += f" (праздник: {holiday.name} x{holiday.multiplier})"
                     else:
+                        description = f"Импорт: {shift_type} {start_time}-{end_time}"
+                        if holiday:
+                            description += f" (праздник: {holiday.name} x{holiday.multiplier})"
                         work_entry = WorkEntry(
                             user_id=user.id,
                             date=shift_date,
                             hours_worked=hours_worked,
-                            description=f"Импорт: {shift_type} {start_time}-{end_time}"
+                            description=description
                         )
                         db.session.add(work_entry)
             
@@ -939,12 +950,10 @@ def export_schedule():
         WorkEntry.date <= end_date
     ).all()
     
-    # Создаём словари для быстрого доступа
     shifts_dict = {}
     for shift in shifts:
         shifts_dict[(shift.user_id, shift.date)] = shift
     
-    # Считаем часы для каждого пользователя
     user_hours = {}
     for user in users:
         total_hours = 0
@@ -959,9 +968,8 @@ def export_schedule():
     
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="3b82f6", end_color="3b82f6", fill_type="solid")
-    weekend_fill = PatternFill(start_color="f59e0b", end_color="f59e0b", fill_type="solid")
+    weekend_fill = PatternFill(start_color="ef4444", end_color="ef4444", fill_type="solid")
     total_fill = PatternFill(start_color="10b981", end_color="10b981", fill_type="solid")
-    total_font = Font(bold=True, color="FFFFFF")
     thin_border = Border(
         left=Side(style='thin'),
         right=Side(style='thin'),
@@ -970,14 +978,12 @@ def export_schedule():
     )
     center_align = Alignment(horizontal='center', vertical='center')
     
-    # Заголовок "Сотрудник"
     ws.cell(row=1, column=1, value="Сотрудник")
     ws.cell(row=1, column=1).font = header_font
     ws.cell(row=1, column=1).fill = header_fill
     ws.cell(row=1, column=1).alignment = center_align
     ws.cell(row=1, column=1).border = thin_border
     
-    # Создаем список дней месяца
     current_date = start_date
     col = 2
     days_in_month = []
@@ -997,7 +1003,6 @@ def export_schedule():
         current_date += timedelta(days=1)
         col += 1
     
-    # Добавляем колонку для итогов
     total_col = len(days_in_month) + 2
     ws.cell(row=1, column=total_col, value="ИТОГО часов")
     ws.cell(row=1, column=total_col).font = header_font
@@ -1005,14 +1010,12 @@ def export_schedule():
     ws.cell(row=1, column=total_col).alignment = center_align
     ws.cell(row=1, column=total_col).border = thin_border
     
-    # Заполняем данные сотрудников
     row = 2
     for user in users:
         ws.cell(row=row, column=1, value=user.username)
         ws.cell(row=row, column=1).alignment = center_align
         ws.cell(row=row, column=1).border = thin_border
         
-        # Заполняем смены по дням
         for day_info in days_in_month:
             shift = shifts_dict.get((user.id, day_info['date']))
             col = day_info['col']
@@ -1023,11 +1026,9 @@ def export_schedule():
                 elif shift.shift_type == 'vacation':
                     value = 'отпуск'
                 else:
-                    # Для рабочих смен выводим фактическое время
                     value = f'{shift.start_time}-{shift.end_time}'
             else:
                 value = ''
-           
             
             ws.cell(row=row, column=col, value=value)
             ws.cell(row=row, column=col).alignment = center_align
@@ -1036,7 +1037,6 @@ def export_schedule():
             if day_info['is_weekend']:
                 ws.cell(row=row, column=col).fill = weekend_fill
         
-        # Добавляем итоговые часы для сотрудника
         total_hours = user_hours.get(user.id, 0)
         ws.cell(row=row, column=total_col, value=total_hours)
         ws.cell(row=row, column=total_col).font = Font(bold=True)
@@ -1046,7 +1046,6 @@ def export_schedule():
         
         row += 1
     
-    # Автоматическая ширина колонок
     for col_num in range(1, total_col + 1):
         col_letter = get_column_letter(col_num)
         ws.column_dimensions[col_letter].width = 12
@@ -1061,6 +1060,82 @@ def export_schedule():
         as_attachment=True,
         download_name=f'graphic_{year}_{month}.xlsx'
     )
+
+# Управление праздничными днями
+@app.route('/admin/holidays')
+@login_required
+@admin_required
+def admin_holidays():
+    year = request.args.get('year', type=int)
+    month = request.args.get('month', type=int)
+    
+    today = date.today()
+    if not year or not month:
+        year = today.year
+        month = today.month
+    
+    start_date = date(year, month, 1)
+    if month == 12:
+        end_date = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_date = date(year, month + 1, 1) - timedelta(days=1)
+    
+    holidays = Holiday.query.filter(
+        Holiday.date >= start_date,
+        Holiday.date <= end_date
+    ).order_by(Holiday.date).all()
+    
+    prev_month = month - 1 if month > 1 else 12
+    prev_year = year if month > 1 else year - 1
+    next_month = month + 1 if month < 12 else 1
+    next_year = year if month < 12 else year + 1
+    
+    month_names = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+                   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+    
+    return render_template('admin_holidays.html',
+                         holidays=holidays,
+                         year=year,
+                         month=month,
+                         month_name=month_names[month-1],
+                         prev_year=prev_year,
+                         prev_month=prev_month,
+                         next_year=next_year,
+                         next_month=next_month,
+                         start_date=start_date,
+                         end_date=end_date)
+
+@app.route('/admin/add_holiday', methods=['POST'])
+@login_required
+@admin_required
+def add_holiday():
+    date_str = request.form.get('date')
+    name = request.form.get('name')
+    multiplier = float(request.form.get('multiplier', 2.0))
+    
+    holiday_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    
+    existing = Holiday.query.filter_by(date=holiday_date).first()
+    if existing:
+        flash('Эта дата уже является праздничной', 'error')
+    else:
+        holiday = Holiday(date=holiday_date, name=name, multiplier=multiplier)
+        db.session.add(holiday)
+        flash(f'Праздник "{name}" добавлен', 'success')
+    
+    db.session.commit()
+    return redirect(url_for('admin_holidays', year=holiday_date.year, month=holiday_date.month))
+
+@app.route('/admin/delete_holiday/<int:holiday_id>')
+@login_required
+@admin_required
+def delete_holiday(holiday_id):
+    holiday = Holiday.query.get_or_404(holiday_id)
+    holiday_date = holiday.date
+    db.session.delete(holiday)
+    db.session.commit()
+    flash('Праздник удалён', 'success')
+    return redirect(url_for('admin_holidays', year=holiday_date.year, month=holiday_date.month))
 
 if __name__ == '__main__':
     with app.app_context():

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .holiday-card {
+        background: rgba(245, 158, 11, 0.1);
+        border-left: 3px solid #f59e0b;
+    }
+    .normal-day {
+        background: var(--bg-tertiary);
+    }
+    .calendar-mini {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 0.25rem;
+        margin-top: 1rem;
+    }
+    .day-cell {
+        padding: 0.5rem;
+        text-align: center;
+        border-radius: 6px;
+        font-size: 0.75rem;
+    }
+    .holiday-cell {
+        background: rgba(245, 158, 11, 0.3);
+        color: #f59e0b;
+        font-weight: bold;
+    }
+</style>
+
+<h1 style="margin: 2rem 0;">🎉 Праздничные дни</h1>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{ holidays|length }}</div>
+        <div class="stat-label">Праздников в {{ month_name }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">×2</div>
+        <div class="stat-label">Коэффициент удвоения</div>
+    </div>
+</div>
+
+<div class="calendar-header" style="margin-top: 1rem;">
+    <div class="calendar-nav">
+        <a href="{{ url_for('admin_holidays', year=prev_year, month=prev_month) }}">← {{ prev_month }}.{{ prev_year }}</a>
+        <span style="font-size: 1.2rem; font-weight: 600;">{{ month_name }} {{ year }}</span>
+        <a href="{{ url_for('admin_holidays', year=next_year, month=next_month) }}">{{ next_month }}.{{ next_year }} →</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">📅 Календарь праздников</div>
+    <div class="calendar-mini">
+        <div class="day-cell"><strong>Пн</strong></div>
+        <div class="day-cell"><strong>Вт</strong></div>
+        <div class="day-cell"><strong>Ср</strong></div>
+        <div class="day-cell"><strong>Чт</strong></div>
+        <div class="day-cell"><strong>Пт</strong></div>
+        <div class="day-cell"><strong>Сб</strong></div>
+        <div class="day-cell"><strong>Вс</strong></div>
+        
+        {# Заполняем пустые дни до начала месяца #}
+        {% set first_day = start_date.weekday() %}
+        {% if first_day != 0 %}
+            {% for i in range(first_day) %}
+                <div class="day-cell"></div>
+            {% endfor %}
+        {% endif %}
+        
+        {# Дни месяца #}
+        {% set current = start_date %}
+        {% while current <= end_date %}
+            {% set holiday = holidays|selectattr("date", "equalto", current)|first %}
+            <div class="day-cell {% if holiday %}holiday-cell{% else %}normal-day{% endif %}">
+                {{ current.day }}
+                {% if holiday %}
+                <br><small>🎉</small>
+                {% endif %}
+            </div>
+            {% set current = current + timedelta(days=1) %}
+        {% endwhile %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">➕ Добавить праздничный день</div>
+    <form method="POST" action="{{ url_for('add_holiday') }}">
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1;">
+                <label>Дата</label>
+                <input type="date" name="date" required>
+            </div>
+            <div class="form-group" style="flex: 2;">
+                <label>Название праздника</label>
+                <input type="text" name="name" required placeholder="Например: Новый год, 8 Марта...">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label>Коэффициент (×)</label>
+                <input type="number" name="multiplier" step="0.5" value="2.0" style="width: 80px;">
+            </div>
+            <div class="form-group" style="align-self: flex-end;">
+                <button type="submit">➕ Добавить</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">📋 Список праздничных дней</div>
+    {% if holidays %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Название</th>
+                    <th>Коэффициент</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for holiday in holidays %}
+                <tr>
+                    <td>{{ holiday.date }}</td>
+                    <td>🎉 {{ holiday.name }}</td>
+                    <td>×{{ holiday.multiplier }}</td>
+                    <td>
+                        <a href="{{ url_for('delete_holiday', holiday_id=holiday.id) }}" class="btn-small btn-danger" onclick="return confirm('Удалить праздник?')">🗑️ Удалить</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="text-align: center; color: var(--text-secondary);">Нет праздничных дней в этом месяце</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">ℹ️ Как это работает</div>
+    <ul>
+        <li>В праздничные дни <strong>часы работы умножаются на коэффициент</strong> (по умолчанию ×2)</li>
+        <li>Выходные и отпуск <strong>не умножаются</strong></li>
+        <li>При назначении смены на праздник, в описании будет отметка</li>
+        <li>В отчётах и экспорте часы будут уже с учётом коэффициента</li>
+    </ul>
+</div>
+
+{% endblock %}
