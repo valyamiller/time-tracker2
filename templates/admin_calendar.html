@@ -166,7 +166,8 @@
                 {% for day in days %}
                 {% set shift = shifts_dict.get((user.id, day.date)) %}
                 {% set vacation = vacations_dict.get((user.id, day.date)) %}
-                <td class="{% if day.is_weekend %}weekend{% endif %}" data-user="{{ user.id }}" data-date="{{ day.date.isoformat() }}">
+                <td class="{% if day.is_weekend %}weekend{% endif %} {% if day.is_holiday %}holiday-day{% endif %}" data-user="{{ user.id }}" data-date="{{ day.date.isoformat() }}" 
+                {% if day.holiday_name %}title="{{ day.holiday_name }}"{% endif %}>
                     <div class="calendar-day">{{ day.date.day }}</div>
                     
                     {% if vacation and not shift %}

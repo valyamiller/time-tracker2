@@ -2,12 +2,48 @@
 
 {% block content %}
 <style>
-    .holiday-card {
-        background: rgba(245, 158, 11, 0.1);
-        border-left: 3px solid #f59e0b;
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
     }
-    .normal-day {
+    .stat-card {
+        background: var(--bg-secondary);
+        padding: 1rem;
+        border-radius: 12px;
+        text-align: center;
+        border: 1px solid var(--border-color);
+    }
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--accent-primary);
+    }
+    .stat-label {
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+    }
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .calendar-nav {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+    .calendar-nav a {
+        padding: 0.5rem 1rem;
         background: var(--bg-tertiary);
+        border-radius: 8px;
+        text-decoration: none;
+        color: var(--text-primary);
     }
     .calendar-mini {
         display: grid;
@@ -20,11 +56,72 @@
         text-align: center;
         border-radius: 6px;
         font-size: 0.75rem;
+        background: var(--bg-tertiary);
     }
     .holiday-cell {
         background: rgba(245, 158, 11, 0.3);
         color: #f59e0b;
         font-weight: bold;
+    }
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 0.3rem;
+        color: var(--text-secondary);
+    }
+    .form-group input, .form-group select {
+        width: 100%;
+        padding: 0.5rem;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        color: var(--text-primary);
+    }
+    button {
+        padding: 0.5rem 1rem;
+        background: var(--accent-primary);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+    .btn-small {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    .btn-danger {
+        background: var(--accent-danger);
+    }
+    .table-container {
+        overflow-x: auto;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    th, td {
+        padding: 0.5rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+    }
+    th {
+        color: var(--text-secondary);
+    }
+    .card {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border-color);
+    }
+    .card-header {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
     }
 </style>
 
@@ -41,7 +138,7 @@
     </div>
 </div>
 
-<div class="calendar-header" style="margin-top: 1rem;">
+<div class="calendar-header">
     <div class="calendar-nav">
         <a href="{{ url_for('admin_holidays', year=prev_year, month=prev_month) }}">← {{ prev_month }}.{{ prev_year }}</a>
         <span style="font-size: 1.2rem; font-weight: 600;">{{ month_name }} {{ year }}</span>
@@ -71,13 +168,12 @@
         {# Дни месяца #}
         {% set days_in_month = (end_date - start_date).days + 1 %}
         {% for day_num in range(1, days_in_month + 1) %}
-            <div class="day-cell {% if day_num in holidays_dates %}holiday-cell{% else %}normal-day{% endif %}">
+            {% set is_holiday = day_num in holidays_dates %}
+            <div class="day-cell {% if is_holiday %}holiday-cell{% endif %}">
                 {{ day_num }}
-                {% if day_num in holidays_dates %}
-                <br><small>🎉</small>
+                {% if is_holiday %}
+                    <br><small>🎉</small>
                 {% endif %}
-            </div>
-        {% endfor %}
             </div>
         {% endfor %}
     </div>
