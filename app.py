@@ -208,6 +208,13 @@ def admin_calendar():
                 vacations_dict[(vac.user_id, current)] = vac
             current += timedelta(days=1)
     
+    # Получаем праздники за месяц
+    holidays = Holiday.query.filter(
+        Holiday.date >= start_date,
+        Holiday.date <= end_date
+    ).all()
+    holidays_dict = {holiday.date: holiday for holiday in holidays}
+    
     prev_month = month - 1 if month > 1 else 12
     prev_year = year if month > 1 else year - 1
     next_month = month + 1 if month < 12 else 1
@@ -220,10 +227,13 @@ def admin_calendar():
     days = []
     for day in range(1, days_in_month + 1):
         current_date = date(year, month, day)
+        holiday = holidays_dict.get(current_date)
         days.append({
             'date': current_date,
             'day_of_week': current_date.weekday(),
-            'is_weekend': current_date.weekday() >= 5
+            'is_weekend': current_date.weekday() >= 5,
+            'is_holiday': holiday is not None,
+            'holiday_name': holiday.name if holiday else None
         })
     
     return render_template('admin_calendar.html',
