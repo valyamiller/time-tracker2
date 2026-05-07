@@ -152,14 +152,14 @@
 </style>
 
 <div class="calendar-header">
-    <div style="background: #333; color: #0f0; padding: 10px; font-size: 11px;">
-    DEBUG overtime_dict keys: 
+    <div style="background: #333; color: #0f0; padding: 10px; font-size: 12px;">
+    <strong>Отладка overtime:</strong><br>
+    Ключи в overtime_dict:
     {% for key in overtime_dict.keys() %}
-        {{ key }}<br>
+        {{ key[0] }} - {{ key[1] }}<br>
     {% endfor %}
     <hr>
-    DEBUG: user.id=7, day.date=2026-05-04, overtime exists={{ overtime_dict.get((7, date(2026,5,4))) is not none }}<br>
-    DEBUG: user.id=7, day.date=2026-05-06, overtime exists={{ overtime_dict.get((7, date(2026,5,6))) is not none }}
+    Текущий месяц: {{ month_name }} {{ year }}
 </div>
     <h1>📅 Календарь смен</h1>
     <div class="calendar-nav">
