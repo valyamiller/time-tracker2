@@ -152,8 +152,14 @@
 </style>
 
 <div class="calendar-header">
-    <div style="background: yellow; color: black; padding: 10px;">
-    DEBUG: overtime_dict keys = {{ overtime_dict.keys()|list }}
+    <div style="background: #333; color: #0f0; padding: 10px; font-size: 11px;">
+    DEBUG overtime_dict keys: 
+    {% for key in overtime_dict.keys() %}
+        {{ key }}<br>
+    {% endfor %}
+    <hr>
+    DEBUG: user.id=7, day.date=2026-05-04, overtime exists={{ overtime_dict.get((7, date(2026,5,4))) is not none }}<br>
+    DEBUG: user.id=7, day.date=2026-05-06, overtime exists={{ overtime_dict.get((7, date(2026,5,6))) is not none }}
 </div>
     <h1>📅 Календарь смен</h1>
     <div class="calendar-nav">
