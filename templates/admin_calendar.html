@@ -163,13 +163,13 @@
 <div class="calendar-container">
     <table class="calendar-table">
         <thead>
-            <tr>
-                <th>Сотрудник</th>
-                {% for day in days %}
-                <th>{{ day.date.day }}<br><small>{{ ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][day.day_of_week] }}</small></th>
-                {% endfor %}
-            </tr>
-        </thead>
+    <tr>
+        <th>Сотрудник</th>
+        {% for day in days %}
+        <th>{{ day.date.day }}<br><small>{{ ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][day.day_of_week] }}</small></th>
+        {% endfor %}
+    </tr>
+</thead>
         <tbody>
             {% for user in users %}
             <tr>
