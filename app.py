@@ -246,12 +246,12 @@ def admin_calendar():
             'holiday_name': holiday.name if holiday else None
         })
     
-        return render_template('admin_calendar.html',
+    return render_template('admin_calendar.html',  # ← return должен быть ПОСЛЕ цикла (без отступа)
                          users=users,
                          days=days,
                          shifts_dict=shifts_dict,
                          vacations_dict=vacations_dict,
-                         overtime_dict=overtime_dict,  # ← добавьте эту строку
+                         overtime_dict=overtime_dict,
                          year=year,
                          month=month,
                          month_name=month_names[month-1],
@@ -259,7 +259,6 @@ def admin_calendar():
                          prev_month=prev_month,
                          next_year=next_year,
                          next_month=next_month)
-
 @app.route('/admin/add_shift_ajax', methods=['POST'])
 @login_required
 @admin_required
