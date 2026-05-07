@@ -169,7 +169,6 @@ def vacation_request():
 @login_required
 @admin_required
 def admin_calendar():
-    print(f"DEBUG overtime_dict: {overtime_dict}")
     year = request.args.get('year', type=int)
     month = request.args.get('month', type=int)
     
@@ -209,7 +208,7 @@ def admin_calendar():
                 vacations_dict[(vac.user_id, current)] = vac
             current += timedelta(days=1)
     
-    # Получаем одобренные дополнительные часы за месяц
+    # 1. СНАЧАЛА получаем overtime_dict
     approved_overtime = OvertimeRequest.query.filter(
         OvertimeRequest.status == 'approved',
         OvertimeRequest.date >= start_date,
@@ -219,7 +218,7 @@ def admin_calendar():
     for ot in approved_overtime:
         overtime_dict[(ot.user_id, ot.date)] = ot
 
-    # Получаем праздники за месяц
+    # 2. ПОТОМ получаем праздники
     holidays = Holiday.query.filter(
         Holiday.date >= start_date,
         Holiday.date <= end_date
@@ -247,7 +246,8 @@ def admin_calendar():
             'holiday_name': holiday.name if holiday else None
         })
     
-    return render_template('admin_calendar.html',  # ← return должен быть ПОСЛЕ цикла (без отступа)
+    # 3. И ТОЛЬКО ПОТОМ return
+    return render_template('admin_calendar.html',
                          users=users,
                          days=days,
                          shifts_dict=shifts_dict,
