@@ -169,6 +169,7 @@ def vacation_request():
 @login_required
 @admin_required
 def admin_calendar():
+    print(f"DEBUG overtime_dict: {overtime_dict}")
     year = request.args.get('year', type=int)
     month = request.args.get('month', type=int)
     

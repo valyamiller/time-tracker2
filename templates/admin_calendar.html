@@ -152,6 +152,9 @@
 </style>
 
 <div class="calendar-header">
+    <div style="background: yellow; color: black; padding: 10px;">
+    DEBUG: overtime_dict keys = {{ overtime_dict.keys()|list }}
+</div>
     <h1>📅 Календарь смен</h1>
     <div class="calendar-nav">
         <a href="{{ url_for('admin_calendar', year=prev_year, month=prev_month) }}">← {{ prev_month }}.{{ prev_year }}</a>
