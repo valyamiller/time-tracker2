@@ -208,6 +208,16 @@ def admin_calendar():
                 vacations_dict[(vac.user_id, current)] = vac
             current += timedelta(days=1)
     
+    # Получаем одобренные дополнительные часы за месяц
+    approved_overtime = OvertimeRequest.query.filter(
+        OvertimeRequest.status == 'approved',
+        OvertimeRequest.date >= start_date,
+        OvertimeRequest.date <= end_date
+    ).all()
+    overtime_dict = {}
+    for ot in approved_overtime:
+        overtime_dict[(ot.user_id, ot.date)] = ot
+
     # Получаем праздники за месяц
     holidays = Holiday.query.filter(
         Holiday.date >= start_date,
@@ -236,11 +246,12 @@ def admin_calendar():
             'holiday_name': holiday.name if holiday else None
         })
     
-    return render_template('admin_calendar.html',
+        return render_template('admin_calendar.html',
                          users=users,
                          days=days,
                          shifts_dict=shifts_dict,
                          vacations_dict=vacations_dict,
+                         overtime_dict=overtime_dict,  # ← добавьте эту строку
                          year=year,
                          month=month,
                          month_name=month_names[month-1],

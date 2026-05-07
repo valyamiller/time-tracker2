@@ -138,6 +138,17 @@
         cursor: pointer;
         font-size: 0.7rem;
     }
+
+    .overtime-badge {
+        display: inline-block;
+        background: rgba(16, 185, 129, 0.2);
+        color: #10b981;
+        padding: 0.15rem 0.3rem;
+        border-radius: 4px;
+        font-size: 0.65rem;
+        margin-top: 0.2rem;
+    }
+
 </style>
 
 <div class="calendar-header">
@@ -194,18 +205,22 @@
                             <button class="delete-shift-btn btn-small btn-danger">🗑️</button>
                         </div>
                         {% else %}
-                        <div class="shift-{{ shift.shift_type }}" data-user="{{ user.id }}" data-date="{{ day.date.isoformat() }}">
-                            <strong>
-                                {% if shift.shift_type == 'morning' %}🌅 Утро
-                                {% elif shift.shift_type == 'day' %}☀️ День
-                                {% elif shift.shift_type == 'night' %}🌙 Вечер
-                                {% endif %}
-                            </strong>
-                            <br>{{ shift.start_time }}-{{ shift.end_time }}
-                            <br>
-                            <button class="delete-shift-btn btn-small btn-danger">🗑️</button>
-                        </div>
-                        {% endif %}
+<div class="shift-{{ shift.shift_type }}" data-user="{{ user.id }}" data-date="{{ day.date.isoformat() }}">
+    <strong>
+        {% if shift.shift_type == 'morning' %}🌅 Утро
+        {% elif shift.shift_type == 'day' %}☀️ День
+        {% elif shift.shift_type == 'night' %}🌙 Вечер
+        {% endif %}
+    </strong>
+    <br>{{ shift.start_time }}-{{ shift.end_time }}
+    {% set overtime = overtime_dict.get((user.id, day.date)) %}
+    {% if overtime %}
+        <br><span class="overtime-badge">➕ +{{ overtime.hours }}ч</span>
+    {% endif %}
+    <br>
+    <button class="delete-shift-btn btn-small btn-danger">🗑️</button>
+</div>
+{% endif %}
                     {% else %}
                     <div class="add-shift-form" data-user="{{ user.id }}" data-date="{{ day.date.isoformat() }}">
                         <select class="shift-type-select" style="width: 100%; margin-bottom: 0.25rem;">
