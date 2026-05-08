@@ -193,6 +193,13 @@
                     {% if vacation and not shift %}
                     <div class="vacation-badge">🏖️ Отпуск</div>
                     {% endif %}
+                    {# Отображение дополнительных часов даже если нет смены #}
+{% set overtime = overtime_dict.get((user.id, day.date)) %}
+{% if overtime and not shift %}
+    <div class="overtime-badge" style="display: block; text-align: center; background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 0.25rem; border-radius: 4px; margin: 0.2rem 0;">
+        ➕ +{{ overtime.hours }}ч
+    </div>
+{% endif %}
                     
                     {% if shift %}
                         {% if shift.shift_type == 'vacation' %}
