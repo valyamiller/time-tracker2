@@ -509,20 +509,20 @@ def my_shifts():
 def admin_reports():
     year = request.args.get('year', type=int)
     month = request.args.get('month', type=int)
-    
+
     today = date.today()
     if not year or not month:
         year = today.year
         month = today.month
-    
+
     start_date = date(year, month, 1)
     if month == 12:
         end_date = date(year + 1, 1, 1) - timedelta(days=1)
     else:
         end_date = date(year, month + 1, 1) - timedelta(days=1)
-    
+
     users = User.query.filter(User.is_active == True, User.username != 'admin').all()
-    
+
     user_stats = []
     for user in users:
         shifts = Shift.query.filter(
@@ -531,42 +531,54 @@ def admin_reports():
             Shift.date <= end_date,
             Shift.shift_type.in_(['morning', 'day', 'night'])
         ).all()
-        
+
         days_off = Shift.query.filter(
             Shift.user_id == user.id,
             Shift.date >= start_date,
             Shift.date <= end_date,
             Shift.shift_type == 'off'
         ).all()
-        
+
         vacations = Shift.query.filter(
             Shift.user_id == user.id,
             Shift.date >= start_date,
             Shift.date <= end_date,
             Shift.shift_type == 'vacation'
         ).all()
-        
+
         vacation_requests = Vacation.query.filter(
             Vacation.user_id == user.id,
             Vacation.status == 'approved',
             Vacation.start_date <= end_date,
             Vacation.end_date >= start_date
         ).all()
-        
+
         vacation_days_from_requests = 0
         for vac in vacation_requests:
             vac_start = max(vac.start_date, start_date)
             vac_end = min(vac.end_date, end_date)
             vacation_days_from_requests += (vac_end - vac_start).days + 1
-        
+
         total_vacation_days = len(vacations) + vacation_days_from_requests
-        
+
         work_entries = WorkEntry.query.filter(
             WorkEntry.user_id == user.id,
             WorkEntry.date >= start_date,
             WorkEntry.date <= end_date
         ).all()
-        
+
+        # Добавляем одобренные overtime запросы
+        overtime_requests = OvertimeRequest.query.filter(
+            OvertimeRequest.user_id == user.id,
+            OvertimeRequest.status == 'approved',
+            OvertimeRequest.date >= start_date,
+            OvertimeRequest.date <= end_date
+        ).all()
+
+        # Суммируем часы
+        total_hours = sum(entry.hours_worked for entry in work_entries)
+        total_hours += sum(ot.hours for ot in overtime_requests)
+
         shift_count = {
             'morning': 0,
             'day': 0,
@@ -576,9 +588,7 @@ def admin_reports():
         }
         for shift in shifts:
             shift_count[shift.shift_type] += 1
-        
-        total_hours = sum(entry.hours_worked for entry in work_entries)
-        
+
         user_stats.append({
             'user': user,
             'shifts': shifts,
@@ -588,23 +598,24 @@ def admin_reports():
             'shift_count': shift_count,
             'total_shifts': len(shifts),
             'total_days_off': len(days_off),
-            'total_hours': total_hours,
-            'work_entries': work_entries
+            'total_hours': round(total_hours, 1),
+            'work_entries': work_entries,
+            'overtime_requests': overtime_requests
         })
-    
+
     total_shifts_all = sum(stat['total_shifts'] for stat in user_stats)
     total_hours_all = sum(stat['total_hours'] for stat in user_stats)
     total_vacation_days_all = sum(stat['vacation_days'] for stat in user_stats)
     total_days_off_all = sum(stat['total_days_off'] for stat in user_stats)
-    
+
     prev_month = month - 1 if month > 1 else 12
     prev_year = year if month > 1 else year - 1
     next_month = month + 1 if month < 12 else 1
     next_year = year if month < 12 else year + 1
-    
-    month_names = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 
+
+    month_names = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
                    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
-    
+
     return render_template('admin_reports.html',
                          user_stats=user_stats,
                          year=year,
@@ -981,6 +992,16 @@ def export_schedule():
         for entry in work_entries:
             if entry.user_id == user.id:
                 total_hours += entry.hours_worked
+        
+        # Добавляем одобренные overtime запросы
+        overtime_for_user = OvertimeRequest.query.filter(
+            OvertimeRequest.user_id == user.id,
+            OvertimeRequest.status == 'approved',
+            OvertimeRequest.date >= start_date,
+            OvertimeRequest.date <= end_date
+        ).all()
+        total_hours += sum(ot.hours for ot in overtime_for_user)
+        
         user_hours[user.id] = round(total_hours, 1)
     
     wb = openpyxl.Workbook()
@@ -1036,10 +1057,17 @@ def export_schedule():
         ws.cell(row=row, column=1, value=user.username)
         ws.cell(row=row, column=1).alignment = center_align
         ws.cell(row=row, column=1).border = thin_border
-        
-        for day_info in days_in_month:
+
+    for day_info in days_in_month:
             shift = shifts_dict.get((user.id, day_info['date']))
             col = day_info['col']
+            
+            # Проверяем наличие overtime на эту дату
+            overtime = OvertimeRequest.query.filter(
+                OvertimeRequest.user_id == user.id,
+                OvertimeRequest.status == 'approved',
+                OvertimeRequest.date == day_info['date']
+            ).first()
             
             if shift:
                 if shift.shift_type == 'off':
@@ -1048,8 +1076,13 @@ def export_schedule():
                     value = 'отпуск'
                 else:
                     value = f'{shift.start_time}-{shift.end_time}'
+                    if overtime:
+                        value += f' +{overtime.hours}ч'
             else:
-                value = ''
+                if overtime:
+                    value = f'+{overtime.hours}ч'
+                else:
+                    value = ''
             
             ws.cell(row=row, column=col, value=value)
             ws.cell(row=row, column=col).alignment = center_align
@@ -1058,14 +1091,15 @@ def export_schedule():
             if day_info['is_weekend']:
                 ws.cell(row=row, column=col).fill = weekend_fill
         
-        total_hours = user_hours.get(user.id, 0)
-        ws.cell(row=row, column=total_col, value=total_hours)
-        ws.cell(row=row, column=total_col).font = Font(bold=True)
-        ws.cell(row=row, column=total_col).fill = total_fill
-        ws.cell(row=row, column=total_col).alignment = center_align
-        ws.cell(row=row, column=total_col).border = thin_border
+            total_hours = user_hours.get(user.id, 0)
+
+            ws.cell(row=row, column=total_col, value=total_hours)
+            ws.cell(row=row, column=total_col).font = Font(bold=True)
+            ws.cell(row=row, column=total_col).fill = total_fill
+            ws.cell(row=row, column=total_col).alignment = center_align
+            ws.cell(row=row, column=total_col).border = thin_border
         
-        row += 1
+            row += 1
     
     for col_num in range(1, total_col + 1):
         col_letter = get_column_letter(col_num)
