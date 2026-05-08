@@ -1054,11 +1054,13 @@ def export_schedule():
     
     row = 2
     for user in users:
+        # Записываем имя сотрудника в первой колонке
         ws.cell(row=row, column=1, value=user.username)
         ws.cell(row=row, column=1).alignment = center_align
         ws.cell(row=row, column=1).border = thin_border
-
-    for day_info in days_in_month:
+        
+        # Заполняем все дни в ОДНОЙ строке
+        for day_info in days_in_month:
             shift = shifts_dict.get((user.id, day_info['date']))
             col = day_info['col']
             
@@ -1091,15 +1093,16 @@ def export_schedule():
             if day_info['is_weekend']:
                 ws.cell(row=row, column=col).fill = weekend_fill
         
-            total_hours = user_hours.get(user.id, 0)
-
-            ws.cell(row=row, column=total_col, value=total_hours)
-            ws.cell(row=row, column=total_col).font = Font(bold=True)
-            ws.cell(row=row, column=total_col).fill = total_fill
-            ws.cell(row=row, column=total_col).alignment = center_align
-            ws.cell(row=row, column=total_col).border = thin_border
+        # Итоговые часы
+        total_hours = user_hours.get(user.id, 0)
+        ws.cell(row=row, column=total_col, value=total_hours)
+        ws.cell(row=row, column=total_col).font = Font(bold=True)
+        ws.cell(row=row, column=total_col).fill = total_fill
+        ws.cell(row=row, column=total_col).alignment = center_align
+        ws.cell(row=row, column=total_col).border = thin_border
         
-            row += 1
+        # Переход к следующему сотруднику (следующая строка)
+        row += 1
     
     for col_num in range(1, total_col + 1):
         col_letter = get_column_letter(col_num)
